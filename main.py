@@ -144,7 +144,7 @@ class Assistant:
                     continue
                 elif cmd == "/ls_dir":
                     file_list = self.file_manager.list_files()
-                    content = file_list
+                    content = str(file_list)
                     self.history.add_message("user", f"=== GOT FILE LIST FROM CURRENT DIRECTORY ===\n{content}\n=======================================" )
                     rich_print(f"[green]Read file list from current directory.[/green]")
                     for f in file_list: 
@@ -177,7 +177,19 @@ class Assistant:
                 
                 action_results = await self.action_processor.process(full_response)
                 if action_results:
-                    summary = "\n".join([f"- {res}" for res in action_results])
+                    summary_items = []
+                    for res in action_results:
+                        if isinstance(res, dict) and res.get("type") == "read_success":
+                            # Dynamically feed the content right back into chat history matrix context
+                            self.history.add_message(
+                                "system", 
+                                f"=== AUTO-READ FILE CONTENT [{res['filename']}] ===\n{res['content']}\n======================================="
+                            )
+                            summary_items.append(f"- {res['status']}")
+                        else:
+                            summary_items.append(f"- {res}")
+                    
+                    summary = "\n".join(summary_items)
                     self.history.add_message("system", f"=== TOOL EXECUTION ENVIRONMENT STATUS UPDATE ===\n{summary}")
 
             except (EOFError, KeyboardInterrupt):
