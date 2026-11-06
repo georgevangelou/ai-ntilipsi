@@ -22,7 +22,15 @@ class OllamaClient:
             # Initialize the asynchronous client
             async_client = ollama.AsyncClient()
             # Initiate a streaming chat request
-            response = await async_client.chat(model=model, messages=messages, stream=True)
+            response = await async_client.chat(
+                model=model,
+                messages=messages,
+                stream=True,
+                options={
+                    "temperature": 0.3,
+                    "top_p": 0.9
+                    }
+                )
             # Iterate through the streamed chunks and yield each content piece
             async for chunk in response:
                 yield chunk["message"]["content"]
