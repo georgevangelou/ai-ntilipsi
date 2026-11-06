@@ -1,5 +1,5 @@
 models:
-  fast: "deepseek-r1:1.5b"
+  fast: "qwen3.5:4b-mlx"
   default: "gemma4:12b-mlx"
   strong: "gemma4:12b-mlx"
 
