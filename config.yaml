@@ -1,0 +1,10 @@
+models:
+  fast: "deepseek-r1:1.5b"
+  default: "gemma4:12b-mlx"
+  strong: "gemma4:12b-mlx"
+
+settings:
+  token_limit: 40000
+  history_file: ".chat_history"
+  # Added for extra flexibility
+  max_file_size_kb: 1024Í
