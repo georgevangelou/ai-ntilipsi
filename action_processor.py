@@ -26,7 +26,8 @@ class ActionProcessor:
         start_idx = clean_response.find('{')
         end_idx = clean_response.rfind('}')
         
-        if start_idx == -1 or end_idx == -1 or start_idx > end_idx:
+        if start_idx == -1 or end_idx == -1 or start_idx > end_idx or "actions" not in clean_response:
+            rich_print("[blue](no action needed)[/blue]")
             return results
 
         json_str = clean_response[start_idx:end_idx + 1].strip()
