@@ -31,6 +31,11 @@ class UnifiedCompleter(Completer):
                     # Provide matches prefix-aware or fully if empty query tracking
                     if not search_term or f.lower().startswith(search_term.lower()):
                         # Retain start coordinate placement calculations properly
-                        yield Completion(f, start_position=-len(word_before_cursor))
+                        # Include '@' prefix in completion text to preserve it when selected via up/down arrows
+                        if word_before_cursor.startswith("@"):
+                            completion_text = "@" + f
+                        else:
+                            completion_text = f
+                        yield Completion(completion_text, start_position=-len(word_before_cursor))
             except Exception:
                 pass
