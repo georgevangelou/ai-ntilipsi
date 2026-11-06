@@ -67,7 +67,7 @@ class FileManager:
     def patch_file(self, filename: str, search_text: str, replace_text: str) -> str:
         """Replaces a specific block of text within a file with robust matching."""
         full_content = self.read_file(filename)
-        search_block = search_text.strip()
+        search_block = search_text.strip('\n')
         
         variants = [
             search_block,
