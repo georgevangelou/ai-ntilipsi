@@ -40,6 +40,7 @@ class Assistant:
         "    { \"type\": \"patch\", \"filename\": \"app.py\", \"search\": \"old_line\", \"replace\": \"new_line\" }\n"
         "  ]\n"
         "}\n\n"
+        "**Multiple Actions Support:**\n- You can include multiple actions of the same type in a single request (e.g., multiple reads, writes, or patches)\n- Each action must be a separate object in the actions array"
         "Supported Action Configurations:\n"
         "- \"write\": { \"type\": \"write\", \"filename\": \"...\", \"content\": \"...\" }\n"
         "- \"patch\": { \"type\": \"patch\", \"filename\": \"...\", \"search\": \"...\", \"replace\": \"...\" }\n"
