@@ -36,10 +36,11 @@ class ActionProcessor:
                 pending_actions = []
                 for action in data["actions"]:
                     if action.get("content"):
+                        # Hide file contents from user view - only show success message
                         rich_print(f"\n[bold blue]Action Transaction Detected:[/bold blue]")
-                        content = action["content"]
-                        syntax = Syntax(content, "python", theme="monokai", line_numbers=True)
-                        console.print(syntax)
+                        # content = action["content"]
+                        # syntax = Syntax(content, "python", theme="monokai", line_numbers=True)
+                        # console.print(syntax)
                                                                                                                                                                                                                                                                                                                                                                  
                     action_type = action.get("type")
                     filename = action.get("filename")
@@ -47,10 +48,11 @@ class ActionProcessor:
                     if action_type == "read":
                         try:
                             content = self.fm.read_file(filename)
-                            # rich_print(f"\n[green]--- Reading {filename} ---[/green]")
-                            ext = Path(filename).suffix.lstrip('.') or 'txt'
-                            syntax = Syntax(content, ext, theme="monokai", line_numbers=True, word_wrap=True)
-                            console.print(syntax)
+                            # Hide file contents from user view - only show success message
+                            rich_print(f"\n[green]--- Reading {filename} ---[/green]")
+                            # ext = Path(filename).suffix.lstrip('.') or 'txt'
+                            # syntax = Syntax(content, ext, theme="monokai", line_numbers=True, word_wrap=True)
+                            # console.print(syntax)
                             
                             results.append({
                                 "type": "read_success",
