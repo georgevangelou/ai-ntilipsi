@@ -29,8 +29,11 @@ class ChatHistory:
             
         self.history = system_messages + chat_messages
 
-    def get_history(self) -> List[Dict]:
-        return self.history
+    def get_history(self, attach_system_prompt=True) -> List[Dict]:
+        if attach_system_prompt:
+            return self.history
+        else:
+            return self.history[1:]
 
     def clear(self):
         self.history = [m for m in self.history if m["role"] == "system"]

@@ -31,7 +31,7 @@ class Assistant:
         
         self.attach_pattern = re.compile(r'@([a-zA-Z0-9_\-\.\/]+)')
         
-        self.commands = ['/stats', '/clear', '/help', '/default', '/fast', '/strong', '/ls_dir', '/self', '/exit', '/model']
+        self.commands = ['/stats', '/clear', '/help', '/default', '/fast', '/strong', '/ls_dir', '/self', '/exit', '/model', '/pure']
         self.completer = UnifiedCompleter(self.commands, self.file_manager)
         
         self.kb = KeyBindings()
@@ -73,6 +73,10 @@ class Assistant:
                 if not user_input.strip(): continue
                 
                 cmd = user_input.lower().strip()
+                attach_system_prompt = True
+                if cmd.startswith("/pure"):
+                    attach_system_prompt = False
+
                 if cmd == "/exit": break
                 elif cmd == "/stats":
                     params, ctx = OllamaClient.get_stats(self.model)
@@ -136,7 +140,7 @@ class Assistant:
                 rich_print(f"\n[cyan]AI:[/cyan] ", end="", flush=True)
 
                 full_response = ""
-                async for chunk in OllamaClient.chat_stream(self.model, self.history.get_history()):
+                async for chunk in OllamaClient.chat_stream(self.model, self.history.get_history(attach_system_prompt)):
                     print(chunk, end="", flush=True)
                     full_response += chunk
                 print()
