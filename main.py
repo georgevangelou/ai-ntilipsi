@@ -179,10 +179,11 @@ class Assistant:
                 full_response = ""
                 async for chunk in OllamaClient.chat_stream(self.model, self.history.get_history(attach_system_prompt)):
                     response, is_thinking = chunk
-                    if is_thinking:
-                        rich_print(f"[dim]{response}[/]", end="", flush=True)
+                    # Stream the response directly as it arrives
+                    rich_print(f"[dim]{response}[/]", end="", flush=True)
                     full_response += response
 
+                print()
                 # Output final response text cleanly
                 try:
                     clean_res = re.sub(r'<think>.*?</think>', '', full_response, flags=re.DOTALL).strip()
