@@ -94,7 +94,7 @@ class Assistant:
                 is_pure, cmd = self.is_option_in_command(cmd, "/pure")
                 attach_system_prompt = not is_pure
                 if is_pure:
-                    rich_print("[dim]No system context will be attached to this prompt.[/]")
+                    rich_print("[dim]No system context will be attached to this prompt.[/dim]")
                     if cmd == '':
                         rich_print("[yellow]No user prompt added.[/yellow]")
                         continue
@@ -119,7 +119,7 @@ class Assistant:
                     continue
                 elif self.is_option_in_command(cmd, "/clear")[0]:
                     self.history.clear()
-                    rich_print("[dim]Context reset to base configuration environment parameters.[/]")
+                    rich_print("[dim]Context reset to base configuration environment parameters.[/dim]")
                     continue
                 elif cmd == "/help":
                     rich_print("""
@@ -174,7 +174,7 @@ class Assistant:
                 self.history.add_message("user", clean_input)
                 rich_print(f"\n[cyan]AI:[/cyan] ", end="", flush=True)
                 # Show thinking indicator
-                rich_print("[dim]🤔 Thinking...[/dim]")
+                rich_print("[dim] Thinking...[/dim]")
 
                 full_response = ""
                 async for chunk in OllamaClient.chat_stream(self.model, self.history.get_history(attach_system_prompt)):
@@ -186,14 +186,17 @@ class Assistant:
                 print()
                 # Output final response text cleanly
                 try:
-                    clean_res = re.sub(r'<think>.*?</think>', '', full_response, flags=re.DOTALL).strip()
+                    clean_res = re.sub(r'', '', full_response, flags=re.DOTALL).strip()
                     start_idx = clean_res.find('{')
                     end_idx = clean_res.rfind('}')
                     parsed_json = json.loads(clean_res[start_idx:end_idx + 1])
                     
-                    # Print out conversation cleanly to the CLI interface
+                    # Extract only the 'message' part if it exists, otherwise print raw response
                     conversation_text = parsed_json.get("message", "")
-                    rich_print(conversation_text)
+                    if not conversation_text:
+                        rich_print(full_response)
+                    else:
+                        rich_print(conversation_text)
                 except Exception:
                     # Fallback text print if JSON structure had an initialization issue
                     rich_print("[dim](Raw response block returned due to internal structural split)[/dim]")
