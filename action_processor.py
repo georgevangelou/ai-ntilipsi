@@ -49,7 +49,7 @@ class ActionProcessor:
                         try:
                             content = self.fm.read_file(filename)
                             # Hide file contents from user view - only show success message
-                            rich_print(f"\n[green]--- Reading {filename} ---[/green]")
+                            rich_print(f"[green]> Read: {filename}[/green]")
                             # ext = Path(filename).suffix.lstrip('.') or 'txt'
                             # syntax = Syntax(content, ext, theme="monokai", line_numbers=True, word_wrap=True)
                             # console.print(syntax)
