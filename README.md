@@ -27,7 +27,7 @@ Token-aware conversation management. Tracks messages with configurable token lim
 Provides slash command completion and file path auto-completion via @ syntax.
 
 ## Usage
-```bash
+```
 python main.py --model <model_name>
 ```
 
@@ -36,5 +36,9 @@ python main.py --model <model_name>
 - `/clear` - Clear conversation history
 - `/help` - List available commands
 - `/default` | `/fast` | `/strong` - Switch models
+- `/exit` - Terminate interactive session gracefully
+- `/model <name>` - Set custom model name dynamically
+- `/pure` - Disable system prompt attachment
+- `/self` - Inject active orchestration workspace context
 - `@filename` - Attach file context
 - `/ls_dir` - List directory contents
