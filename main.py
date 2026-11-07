@@ -54,6 +54,21 @@ class Assistant:
             except Exception as e:
                 rich_print(f"[red]Error linking {file_path_str}: {e}[/red]")
 
+    def is_option_in_command(self, prompt: str, option: str):
+        # Check if option exists in prompt
+        if not (prompt == option or (option + ' ') in prompt or prompt.endswith(option)):
+            return False, prompt
+        
+        # Remove the option from prompt
+        if prompt == option:
+            remaining = ''
+        elif (option + ' ') in prompt:
+            remaining = prompt.replace(option + ' ', '', 1)
+        else:
+            remaining = prompt[:-len(option)]
+        
+        return True, remaining
+    
     async def run_async(self):
         """Asynchronous execution core loop."""
         rich_print(Panel(f"Connected to Ollama Backend Layer\nModel: {self.model}\nToken Window Limit: {self.history.limit}", 
@@ -73,16 +88,21 @@ class Assistant:
                 if not user_input.strip(): continue
                 
                 cmd = user_input.lower().strip()
-                attach_system_prompt = True
-                if cmd.startswith("/pure"):
-                    attach_system_prompt = False
+
+                is_pure, cmd = self.is_option_in_command(cmd, "/pure")
+                attach_system_prompt = not is_pure
+                if is_pure:
+                    rich_print("[green]No system context will be attached to this prompt.[/green]")
+                    if cmd == '':
+                        rich_print("[yellow]No user prompt added.[/yellow]")
+                        continue
 
                 if cmd == "/exit": break
                 elif cmd == "/stats":
                     params, ctx = OllamaClient.get_stats(self.model)
                     rich_print(f"Model: {self.model}\nParams: {params}\nContext Limit: {ctx}")
                     continue
-                elif cmd == "/clear":
+                elif self.is_option_in_command(cmd, "/clear")[0]:
                     self.history.clear()
                     rich_print("[yellow]Context reset to base configuration environment parameters.[/yellow]")
                     continue
@@ -107,7 +127,7 @@ class Assistant:
                         self.model = STRONG_MODEL
                     else:
                         self.model = DEFAULT_MODEL
-                    rich_print(f"Active runtime model targets updated: {self.model}")
+                    rich_print(f"[green]Active runtime model targets updated: {self.model}[/green]")
                     continue
                 elif cmd.startswith("/model"):
                     parts = user_input.split()
