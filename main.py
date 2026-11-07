@@ -2,6 +2,7 @@
 
 import argparse
 import re
+import json
 import asyncio
 from pathlib import Path
 from prompt_toolkit import prompt
@@ -178,12 +179,26 @@ class Assistant:
                 full_response = ""
                 async for chunk in OllamaClient.chat_stream(self.model, self.history.get_history(attach_system_prompt)):
                     response, is_thinking = chunk
-                    to_print = f"[dim]{response}[/]" if is_thinking else response
-                    rich_print(to_print, end="", flush=True)
+                    if is_thinking:
+                        rich_print(f"[dim]{response}[/]", end="", flush=True)
                     full_response += response
-                print()
-                print() 
 
+                # Output final response text cleanly
+                try:
+                    clean_res = re.sub(r'<think>.*?</think>', '', full_response, flags=re.DOTALL).strip()
+                    start_idx = clean_res.find('{')
+                    end_idx = clean_res.rfind('}')
+                    parsed_json = json.loads(clean_res[start_idx:end_idx + 1])
+                    
+                    # Print out conversation cleanly to the CLI interface
+                    conversation_text = parsed_json.get("message", "")
+                    rich_print(conversation_text)
+                except Exception:
+                    # Fallback text print if JSON structure had an initialization issue
+                    rich_print("[dim](Raw response block returned due to internal structural split)[/dim]")
+                    rich_print(full_response)
+                
+                print()
                 self.history.add_message("assistant", full_response)
                 
                 action_results = await self.action_processor.process(full_response)

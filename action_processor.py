@@ -20,20 +20,19 @@ class ActionProcessor:
         results = []
         
         # Clean reasoning tags out if present
-        clean_response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL)
+        clean_response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL).strip()
         
         # Find the true outermost boundaries of the JSON structure
         start_idx = clean_response.find('{')
         end_idx = clean_response.rfind('}')
         
-        if start_idx == -1 or end_idx == -1 or start_idx > end_idx or "actions" not in clean_response:
-            rich_print("[dim](no action needed)[/]")
+        if start_idx == -1 or end_idx == -1:
             return results
 
         json_str = clean_response[start_idx:end_idx + 1].strip()
         try:
             data = json.loads(json_str)
-            if "actions" in data:
+            if "actions" in data and data["actions"]:
                 pending_actions = []
                 for action in data["actions"]:
                     if action.get("content"):
@@ -48,7 +47,7 @@ class ActionProcessor:
                     if action_type == "read":
                         try:
                             content = self.fm.read_file(filename)
-                            rich_print(f"\n[green]--- Reading {filename} ---[/green]")
+                            # rich_print(f"\n[green]--- Reading {filename} ---[/green]")
                             ext = Path(filename).suffix.lstrip('.') or 'txt'
                             syntax = Syntax(content, ext, theme="monokai", line_numbers=True, word_wrap=True)
                             console.print(syntax)

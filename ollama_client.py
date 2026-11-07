@@ -9,28 +9,23 @@ class OllamaClient:
     @staticmethod
     async def chat_stream(model: str, messages: List[Dict]) -> AsyncGenerator[list, None]:
         """
-        Sends a message to the specified Ollama model and streams the response back.
-        
-        Args:
-            model: The name of the model to use (e.g., 'llama3').
-            messages: A list of message dictionaries for the conversation history.
-            
-        Yields:
-            Strings representing chunks of the generated content.
+        Sends a message to the specified Ollama model and streams the response back,
+        strictly enforcing a valid JSON output structure.
         """
         try:
             # Initialize the asynchronous client
             async_client = ollama.AsyncClient()
             # Initiate a streaming chat request
             options = {
-                    "temperature": 0.3,
-                    "top_p": 0.9
-                }
+                "temperature": 0.1,  # Lower temperature lowers syntax variance
+                "top_p": 0.9
+            }
             response = await async_client.chat(
                 model=model,
                 messages=messages,
                 stream=True,
                 options=options,
+                format='json',  # Enforces strict JSON response syntax from Ollama
                 think=False
             )
             # Iterate through the streamed chunks and yield each piece safely
@@ -47,7 +42,7 @@ class OllamaClient:
         except Exception as e:
             # Log the error and yield an error message to the UI
             logger.error(f"Ollama API Error: {e}")
-            yield [f"\n[API ERROR: {e}]\n", False]
+            yield [f'\n{{"message": "API Error: {e}", "actions": []}}\n', False]
 
     @staticmethod
     def get_stats(model: str):
