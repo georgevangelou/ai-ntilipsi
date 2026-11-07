@@ -1,9 +1,7 @@
 models:
-  fast_mac: "qwen3.5:4b-mlx"
-  fast:     "qwen3.5:4b"
-  default:  "gemma4:12b-mlx"
-  strong:   "gemma4:12b-mlx"
-  qwen:     "qwen2.5-coder:7b"
+  fast: "qwen3.5:4b-mlx"
+  default: "qwen3.5:4b"
+  strong: "gemma4:12b-mlx"
 
 settings:
   token_limit: 40000
