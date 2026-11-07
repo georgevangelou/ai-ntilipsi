@@ -11,7 +11,7 @@ DEFAULT_CONFIG = {
         "strong": "gemma4:12b-mlx"
     },
     "settings": {
-        "token_limit": 40000,
+        "token_limit": 100000,
         "history_file": ".chat_history",
         "ignored_dirs": [".git", "__pycache__", "node_modules", ".venv", ".env", ".idea", ".vscode", ".github"]
     }
