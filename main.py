@@ -8,6 +8,7 @@ from prompt_toolkit import prompt
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from rich import print as rich_print
+from rich import table
 from rich.panel import Panel
 
 # Local component imports
@@ -101,13 +102,19 @@ class Assistant:
                 elif cmd == "/stats":
                     params, ctx = OllamaClient.get_stats(self.model)
                     tokens_used = self.history.get_token_count()
-                    rich_print(f"[bold blue]--- MODEL ---[/]\n"
-                               f"[bold]Name[/]:   {self.model}\n"
-                               f"[bold]Params[/]: {params}\n"
-                               f"[bold blue]--- TOKENS ---[/]\n"
-                               f"[bold]Model Limit    :[/] {ctx}\n"
-                               f"[bold]Imposed Limit  :[/] {TOKEN_LIMIT}\n"
-                               f"[bold]Currently Used :[/] {tokens_used}")
+                    t = table.Table(
+                        title="Model Statistics",
+                        box=None,
+                        border_style="blue"
+                    )
+                    t.add_column("Category", style="bold")
+                    t.add_column("Value", style="cyan")
+                    t.add_row("Model Name", self.model)
+                    t.add_row("Parameters", params)
+                    t.add_row("Token Window Limit", ctx)
+                    t.add_row("Imposed Token Limit", str(TOKEN_LIMIT))
+                    t.add_row("Tokens Currently Used", str(tokens_used))
+                    rich_print(t)
                     continue
                 elif self.is_option_in_command(cmd, "/clear")[0]:
                     self.history.clear()
