@@ -100,7 +100,14 @@ class Assistant:
                 if cmd == "/exit": break
                 elif cmd == "/stats":
                     params, ctx = OllamaClient.get_stats(self.model)
-                    rich_print(f"Model: {self.model}\nParams: {params}\nContext Limit: {ctx}")
+                    tokens_used = self.history.get_token_count()
+                    rich_print(f"[bold blue]--- MODEL ---[/]\n"
+                               f"[bold]Name[/]:   {self.model}\n"
+                               f"[bold]Params[/]: {params}\n"
+                               f"[bold blue]--- TOKENS ---[/]\n"
+                               f"[bold]Model Limit    :[/] {ctx}\n"
+                               f"[bold]Imposed Limit  :[/] {TOKEN_LIMIT}\n"
+                               f"[bold]Currently Used :[/] {tokens_used}")
                     continue
                 elif self.is_option_in_command(cmd, "/clear")[0]:
                     self.history.clear()

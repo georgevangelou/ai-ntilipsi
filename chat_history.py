@@ -35,6 +35,9 @@ class ChatHistory:
         else:
             return self.history[1:]
 
+    def get_token_count(self) -> int:
+        return self._current_tokens
+
     def clear(self):
         self.history = [m for m in self.history if m["role"] == "system"]
         self._current_tokens = 0
