@@ -92,7 +92,7 @@ class Assistant:
                 is_pure, cmd = self.is_option_in_command(cmd, "/pure")
                 attach_system_prompt = not is_pure
                 if is_pure:
-                    rich_print("[green]No system context will be attached to this prompt.[/green]")
+                    rich_print("[dim]No system context will be attached to this prompt.[/]")
                     if cmd == '':
                         rich_print("[yellow]No user prompt added.[/yellow]")
                         continue
@@ -104,7 +104,7 @@ class Assistant:
                     continue
                 elif self.is_option_in_command(cmd, "/clear")[0]:
                     self.history.clear()
-                    rich_print("[yellow]Context reset to base configuration environment parameters.[/yellow]")
+                    rich_print("[dim]Context reset to base configuration environment parameters.[/]")
                     continue
                 elif cmd == "/help":
                     rich_print("""
