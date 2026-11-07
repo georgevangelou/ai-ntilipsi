@@ -172,11 +172,15 @@ class Assistant:
 
                 self.history.add_message("user", clean_input)
                 rich_print(f"\n[cyan]AI:[/cyan] ", end="", flush=True)
+                # Show thinking indicator
+                rich_print("[dim]🤔 Thinking...[/dim]")
 
                 full_response = ""
                 async for chunk in OllamaClient.chat_stream(self.model, self.history.get_history(attach_system_prompt)):
-                    print(chunk, end="", flush=True)
-                    full_response += chunk
+                    response, is_thinking = chunk
+                    to_print = f"[dim]{response}[/]" if is_thinking else response
+                    rich_print(to_print, end="", flush=True)
+                    full_response += response
                 print()
                 print() 
 
