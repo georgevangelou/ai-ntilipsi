@@ -177,11 +177,27 @@ class Assistant:
                 rich_print("[dim] Thinking...[/dim]")
 
                 full_response = ""
+                # message_prefix = '  "message": "'
+                # message_suffix = '",'
+                # found_message = False
                 async for chunk in OllamaClient.chat_stream(self.model, self.history.get_history(attach_system_prompt)):
                     response, is_thinking = chunk
-                    # Stream the response directly as it arrives
-                    rich_print(f"[dim]{response}[/]", end="", flush=True)
+                    # # Stream the response directly as it arrives
+                    # found_message = found_message or full_response.endswith(message_prefix)
+                    # if found_message:
+                    #     if response.endswith(message_suffix):
+                    #         found_message = False
+                    #     rich_print(f"[dim]{response}[/]", end="", flush=True)
+                    # rich_print(f"[dim]{response}[/]", end="", flush=True)
+
                     full_response += response
+                    if 'content' in response:
+                        rich_print(f"[dim]Writing content...[/]", end=" ", flush=True)
+                    if 'actions' in response:
+                        rich_print(f"[dim]Writing actions...[/]", end=" ", flush=True)
+                    elif 'message' in response:
+                        rich_print(f"[dim]> Writing message...[/]", end=" ", flush=True)
+                    
 
                 print()
                 # Output final response text cleanly
