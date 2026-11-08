@@ -17,7 +17,7 @@ class OllamaClient:
             async_client = ollama.AsyncClient()
             # Initiate a streaming chat request
             options = {
-                "temperature": 0.1,  # Lower temperature lowers syntax variance
+                "temperature": 0.3,  # Lower temperature lowers syntax variance
                 "top_p": 0.9
             }
             response = await async_client.chat(
@@ -26,7 +26,7 @@ class OllamaClient:
                 stream=True,
                 options=options,
                 format='json',  # Enforces strict JSON response syntax from Ollama
-                think=False
+                think=True
             )
             # Iterate through the streamed chunks and yield each piece safely
             async for chunk in response:
