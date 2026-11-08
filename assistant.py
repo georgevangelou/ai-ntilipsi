@@ -24,6 +24,7 @@ from typing import Tuple
 NONE = "NONE"
 BREAK = "BREAK"
 CONTINUE = "CONTINUE"
+MAX_AGENT_ITERATIONS = 10
 
 class Assistant:
     """High-level Orchestrator for the AI Agent."""
@@ -180,6 +181,70 @@ class Assistant:
             to_return = CONTINUE
 
         return to_return, attach_system_prompt
+
+    async def run_agent_request(self, attach_system_prompt: bool) -> None:
+        """Continue model turns while actions provide new results to work with."""
+        for _ in range(MAX_AGENT_ITERATIONS):
+            rich_print(f"\n[cyan]AI:[/cyan] ", end="", flush=True)
+            rich_print("[dim] Thinking...[/dim]")
+
+            full_response = ""
+            async for chunk in OllamaClient.chat_stream(
+                self.model, self.history.get_history(attach_system_prompt)
+            ):
+                response, is_thinking = chunk
+                if not is_thinking:
+                    full_response += response
+                    if "content" in response:
+                        rich_print("[dim]Writing content...[/]", end=" ", flush=True)
+                    elif "actions" in response:
+                        rich_print("[dim]Writing actions...[/]", end=" ", flush=True)
+                    elif "message" in response:
+                        rich_print("[dim]> Writing message...[/]", end=" ", flush=True)
+
+            print()
+            try:
+                start_idx = full_response.find("{")
+                end_idx = full_response.rfind("}")
+                parsed_json = json.loads(full_response[start_idx:end_idx + 1])
+                conversation_text = parsed_json.get("message", "")
+                if not conversation_text:
+                    rich_print(full_response)
+                else:
+                    rich_print(conversation_text)
+            except Exception:
+                rich_print("[dim](Raw response block returned due to internal structural split)[/dim]")
+                rich_print(full_response)
+
+            print()
+            self.history.add_message("assistant", full_response)
+            action_results = await self.action_processor.process(full_response)
+            if not action_results:
+                return
+
+            summary_items = []
+            for result in action_results:
+                if isinstance(result, dict) and result.get("type") == "read_success":
+                    self.history.add_context(
+                        f"=== AUTO-READ FILE CONTENT [{result['filename']}] ===\n"
+                        f"{result['content']}\n======================================="
+                    )
+                    summary_items.append(f"- {result['status']}")
+                else:
+                    summary_items.append(f"- {result}")
+
+            summary = "\n".join(summary_items)
+            self.history.add_context(
+                f"=== TOOL EXECUTION ENVIRONMENT STATUS UPDATE ===\n{summary}"
+            )
+            if any("Execution denied by user permission gate." in str(result)
+                   for result in action_results):
+                return
+        else:
+            rich_print(
+                f"[yellow]Stopped after {MAX_AGENT_ITERATIONS} model iterations. "
+                "The request may be incomplete.[/yellow]"
+            )
     
     async def run_async(self):
         """Asynchronous execution core loop."""
@@ -215,71 +280,7 @@ class Assistant:
                 if not clean_input: continue
 
                 self.history.add_message("user", clean_input)
-                rich_print(f"\n[cyan]AI:[/cyan] ", end="", flush=True)
-                # Show thinking indicator
-                rich_print("[dim] Thinking...[/dim]")
-
-                full_response = ""
-                # message_prefix = '  "message": "'
-                # message_suffix = '",'
-                # found_message = False
-                async for chunk in OllamaClient.chat_stream(self.model, self.history.get_history(attach_system_prompt)):
-                    response, is_thinking = chunk
-                    # # Stream the response directly as it arrives
-                    # found_message = found_message or full_response.endswith(message_prefix)
-                    # if found_message:
-                    #     if response.endswith(message_suffix):
-                    #         found_message = False
-                    #     rich_print(f"[dim]{response}[/]", end="", flush=True)
-                    # rich_print(f"[dim]{response}[/]", end="", flush=True)
-
-                    if not is_thinking:
-                        full_response += response
-                        if 'content' in response:
-                            rich_print(f"[dim]Writing content...[/]", end=" ", flush=True)
-                        if 'actions' in response:
-                            rich_print(f"[dim]Writing actions...[/]", end=" ", flush=True)
-                        elif 'message' in response:
-                            rich_print(f"[dim]> Writing message...[/]", end=" ", flush=True)
-                    
-
-                print()
-                # Output final response text cleanly
-                try:
-                    clean_res = re.sub(r'', '', full_response, flags=re.DOTALL).strip()
-                    start_idx = clean_res.find('{')
-                    end_idx = clean_res.rfind('}')
-                    parsed_json = json.loads(clean_res[start_idx:end_idx + 1])
-                    
-                    # Extract only the 'message' part if it exists, otherwise print raw response
-                    conversation_text = parsed_json.get("message", "")
-                    if not conversation_text:
-                        rich_print(full_response)
-                    else:
-                        rich_print(conversation_text)
-                except Exception:
-                    # Fallback text print if JSON structure had an initialization issue
-                    rich_print("[dim](Raw response block returned due to internal structural split)[/dim]")
-                    rich_print(full_response)
-                
-                print()
-                self.history.add_message("assistant", full_response)
-                
-                action_results = await self.action_processor.process(full_response)
-                if action_results:
-                    summary_items = []
-                    for res in action_results:
-                        if isinstance(res, dict) and res.get("type") == "read_success":
-                            # Dynamically feed the content right back into chat history matrix context
-                            self.history.add_context(
-                                f"=== AUTO-READ FILE CONTENT [{res['filename']}] ===\n{res['content']}\n======================================="
-                            )
-                            summary_items.append(f"- {res['status']}")
-                        else:
-                            summary_items.append(f"- {res}")
-                    
-                    summary = "\n".join(summary_items)
-                    self.history.add_context(f"=== TOOL EXECUTION ENVIRONMENT STATUS UPDATE ===\n{summary}")
+                await self.run_agent_request(attach_system_prompt)
 
             except (EOFError, KeyboardInterrupt):
                 rich_print("\n[yellow]Shutdown intercept caught. Graceful exit initiated.[/yellow]")

@@ -17,6 +17,8 @@ Streams responses from Ollama API with async support. Handles temperature tuning
 ### `action_processor.py`
 Parses JSON actions from AI responses. Executes read/write/patch/delete operations with user permission checks.
 
+The assistant feeds action results back to the model and continues the same request for up to 10 model iterations, stopping when no actions are returned or an action is denied.
+
 ### `file_manager.py`
 Secure sandboxed file operations. Lists files, reads/writes/patches/deletes with path validation against ignored directories.
 

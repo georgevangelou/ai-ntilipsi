@@ -37,7 +37,8 @@ SYSTEM_PROMPT = (
     '1. Files matched with "@filename" notation are already fully loaded already. Do NOT issue a "read" action block for them.\n'
     '2. Prefer "patch" over "write" for updates changing less than 60% of an existing file.\n'
     '3. When using "write", placeholders like "# rest of code" are forbidden. Emit the entire code contents.\n'
-    '4. For "patch", copy "search" verbatim from the current file and include enough surrounding lines to identify a unique block.'
+    '4. For "patch", copy "search" verbatim from the current file and include enough surrounding lines to identify a unique block.\n'
+    '5. After actions run, their results will be provided in a follow-up turn. Continue using those results until the request is complete; then respond with "actions": [].'
 )
 
 def load_config() -> dict:
