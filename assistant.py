@@ -55,21 +55,31 @@ class Assistant:
         for file_path_str in matches:
             try:
                 content = self.file_manager.read_file(file_path_str)
-                self.history.add_message("user", f"=== ATTACHED FILE CONTEXT [{file_path_str}] ===\n{content}\n=======================================")
+                self.history.add_context(
+                    f"=== ATTACHED FILE CONTEXT [{file_path_str}] ===\n{content}\n=======================================",
+                    defer_until_next_user=True,
+                )
                 rich_print(f"[green]Attached context from: {file_path_str}[/green]")
             except Exception as e:
                 rich_print(f"[red]Error linking {file_path_str}: {e}[/red]")
 
     def is_option_in_command(self, prompt: str, option: str):
         # Check if option exists in prompt
-        if not (prompt == option or (option + ' ') in prompt or prompt.endswith(option)):
+        normalized_prompt = prompt.lower()
+        normalized_option = option.lower()
+        if not (
+            normalized_prompt == normalized_option
+            or (normalized_option + ' ') in normalized_prompt
+            or normalized_prompt.endswith(normalized_option)
+        ):
             return False, prompt
         
         # Remove the option from prompt
-        if prompt == option:
+        if normalized_prompt == normalized_option:
             remaining = ''
-        elif (option + ' ') in prompt:
-            remaining = prompt.replace(option + ' ', '', 1)
+        elif (normalized_option + ' ') in normalized_prompt:
+            index = normalized_prompt.index(normalized_option + ' ')
+            remaining = prompt[:index] + prompt[index + len(option) + 1:]
         else:
             remaining = prompt[:-len(option)]
         
@@ -148,7 +158,10 @@ class Assistant:
         elif cmd == "/ls_dir":
             file_list = self.file_manager.list_files()
             content = str(file_list)
-            self.history.add_message("user", f"=== GOT FILE LIST FROM CURRENT DIRECTORY ===\n{content}\n=======================================" )
+            self.history.add_context(
+                f"=== GOT FILE LIST FROM CURRENT DIRECTORY ===\n{content}\n=======================================",
+                defer_until_next_user=True,
+            )
             rich_print(f"[green]Read file list from current directory.[/green]")
             for f in file_list: 
                 rich_print(f"  - [cyan]{f}[/cyan]")
@@ -157,7 +170,10 @@ class Assistant:
         elif cmd == "/self":
             try:
                 content = Path(__file__).read_text(encoding="utf-8")
-                self.history.add_message("user", f"=== ATTACHED FILE CONTEXT [self] ===\n{content}\n=======================================" )
+                self.history.add_context(
+                    f"=== ATTACHED FILE CONTEXT [self] ===\n{content}\n=======================================",
+                    defer_until_next_user=True,
+                )
                 rich_print(f"[green]Bound orchestration layer source successfully.[/green]")
             except Exception as e:
                 rich_print(f"[red]Error parsing runtime package: {e}[/red]")
@@ -193,6 +209,9 @@ class Assistant:
                 
                 self.handle_attachment_logic(user_input)
                 clean_input = self.attach_pattern.sub('', user_input).strip()
+                if not attach_system_prompt:
+                    _, clean_input = self.is_option_in_command(clean_input, "/pure")
+                    clean_input = clean_input.strip()
                 if not clean_input: continue
 
                 self.history.add_message("user", clean_input)
@@ -214,13 +233,14 @@ class Assistant:
                     #     rich_print(f"[dim]{response}[/]", end="", flush=True)
                     # rich_print(f"[dim]{response}[/]", end="", flush=True)
 
-                    full_response += response
-                    if 'content' in response:
-                        rich_print(f"[dim]Writing content...[/]", end=" ", flush=True)
-                    if 'actions' in response:
-                        rich_print(f"[dim]Writing actions...[/]", end=" ", flush=True)
-                    elif 'message' in response:
-                        rich_print(f"[dim]> Writing message...[/]", end=" ", flush=True)
+                    if not is_thinking:
+                        full_response += response
+                        if 'content' in response:
+                            rich_print(f"[dim]Writing content...[/]", end=" ", flush=True)
+                        if 'actions' in response:
+                            rich_print(f"[dim]Writing actions...[/]", end=" ", flush=True)
+                        elif 'message' in response:
+                            rich_print(f"[dim]> Writing message...[/]", end=" ", flush=True)
                     
 
                 print()
@@ -251,8 +271,7 @@ class Assistant:
                     for res in action_results:
                         if isinstance(res, dict) and res.get("type") == "read_success":
                             # Dynamically feed the content right back into chat history matrix context
-                            self.history.add_message(
-                                "system", 
+                            self.history.add_context(
                                 f"=== AUTO-READ FILE CONTENT [{res['filename']}] ===\n{res['content']}\n======================================="
                             )
                             summary_items.append(f"- {res['status']}")
@@ -260,7 +279,7 @@ class Assistant:
                             summary_items.append(f"- {res}")
                     
                     summary = "\n".join(summary_items)
-                    self.history.add_message("system", f"=== TOOL EXECUTION ENVIRONMENT STATUS UPDATE ===\n{summary}")
+                    self.history.add_context(f"=== TOOL EXECUTION ENVIRONMENT STATUS UPDATE ===\n{summary}")
 
             except (EOFError, KeyboardInterrupt):
                 rich_print("\n[yellow]Shutdown intercept caught. Graceful exit initiated.[/yellow]")

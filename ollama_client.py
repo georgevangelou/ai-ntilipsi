@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, AsyncGenerator
+from typing import List, Dict, AsyncGenerator, Tuple
 import ollama
 
 logger = logging.getLogger("Assistant")
@@ -7,7 +7,7 @@ logger = logging.getLogger("Assistant")
 class OllamaClient:
     """Handles real-time streaming communication with Ollama utilizing AsyncIO."""
     @staticmethod
-    async def chat_stream(model: str, messages: List[Dict]) -> AsyncGenerator[list, None]:
+    async def chat_stream(model: str, messages: List[Dict]) -> AsyncGenerator[Tuple[str, bool], None]:
         """
         Sends a message to the specified Ollama model and streams the response back,
         strictly enforcing a valid JSON output structure.
@@ -33,16 +33,16 @@ class OllamaClient:
                 if hasattr(chunk, 'message'):
                     # 1. First, check if the model is currently outputting a thought process
                     if getattr(chunk.message, 'thinking', None):
-                        yield [chunk.message.thinking, True]
+                        yield chunk.message.thinking, True
                     
                     # 2. Next, check if it's outputting the actual final answer content
                     if chunk.message.content:
-                        yield [chunk.message.content, False]
+                        yield chunk.message.content, False
 
         except Exception as e:
             # Log the error and yield an error message to the UI
             logger.error(f"Ollama API Error: {e}")
-            yield [f'\n{{"message": "API Error: {e}", "actions": []}}\n', False]
+            yield f'\n{{"message": "API Error: {e}", "actions": []}}\n', False
 
     @staticmethod
     def get_stats(model: str):
