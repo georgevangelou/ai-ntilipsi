@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import re
-import json
 import asyncio
 from pathlib import Path
 from prompt_toolkit import prompt
@@ -15,8 +14,8 @@ from rich.panel import Panel
 from config_manager import CONFIG, FAST_MODEL, DEFAULT_MODEL, STRONG_MODEL, TOKEN_LIMIT, logger
 from file_manager import FileManager
 from chat_history import ChatHistory
-from ollama_client import OllamaClient
-from action_processor import ActionProcessor
+from ollama_client import OllamaClient, OllamaClientError
+from action_processor import ActionProcessor, ActionResponseError
 from autocomplete import UnifiedCompleter
 from config_manager import SYSTEM_PROMPT
 from typing import Tuple
@@ -182,45 +181,49 @@ class Assistant:
 
         return to_return, attach_system_prompt
 
-    async def run_agent_request(self, attach_system_prompt: bool) -> None:
-        """Continue model turns while actions provide new results to work with."""
+    async def run_agent_request(self, attach_system_prompt: bool) -> str:
+        """Continue model turns and return the request outcome."""
         for _ in range(MAX_AGENT_ITERATIONS):
             rich_print(f"\n[cyan]AI:[/cyan] ", end="", flush=True)
             rich_print("[dim] Thinking...[/dim]")
 
             full_response = ""
-            async for chunk in OllamaClient.chat_stream(
-                self.model, self.history.get_history(attach_system_prompt)
-            ):
-                response, is_thinking = chunk
-                if not is_thinking:
-                    full_response += response
-                    if "content" in response:
-                        rich_print("[dim]Writing content...[/]", end=" ", flush=True)
-                    elif "actions" in response:
-                        rich_print("[dim]Writing actions...[/]", end=" ", flush=True)
-                    elif "message" in response:
-                        rich_print("[dim]> Writing message...[/]", end=" ", flush=True)
-
-            print()
             try:
-                start_idx = full_response.find("{")
-                end_idx = full_response.rfind("}")
-                parsed_json = json.loads(full_response[start_idx:end_idx + 1])
-                conversation_text = parsed_json.get("message", "")
-                if not conversation_text:
-                    rich_print(full_response)
-                else:
-                    rich_print(conversation_text)
-            except Exception:
-                rich_print("[dim](Raw response block returned due to internal structural split)[/dim]")
-                rich_print(full_response)
+                async for chunk in OllamaClient.chat_stream(
+                    self.model, self.history.get_history(attach_system_prompt)
+                ):
+                    response, is_thinking = chunk
+                    if not is_thinking:
+                        full_response += response
+                        if "content" in response:
+                            rich_print("[dim]Writing content...[/]", end=" ", flush=True)
+                        elif "actions" in response:
+                            rich_print("[dim]Writing actions...[/]", end=" ", flush=True)
+                        elif "message" in response:
+                            rich_print("[dim]> Writing message...[/]", end=" ", flush=True)
+            except OllamaClientError as error:
+                print()
+                rich_print(f"[red]{error} The request did not complete.[/red]")
+                return "failed"
 
             print()
             self.history.add_message("assistant", full_response)
+            try:
+                parsed_response = self.action_processor.parse_response(full_response)
+            except ActionResponseError as error:
+                rich_print(f"[red]Invalid model response: {error}[/red]")
+                return "failed"
+
+            conversation_text = parsed_response["message"]
+            if conversation_text:
+                rich_print(conversation_text)
+            else:
+                rich_print(full_response)
+
+            print()
             action_results = await self.action_processor.process(full_response)
             if not action_results:
-                return
+                return "completed"
 
             summary_items = []
             for result in action_results:
@@ -239,12 +242,13 @@ class Assistant:
             )
             if any("Execution denied by user permission gate." in str(result)
                    for result in action_results):
-                return
+                return "denied"
         else:
             rich_print(
                 f"[yellow]Stopped after {MAX_AGENT_ITERATIONS} model iterations. "
                 "The request may be incomplete.[/yellow]"
             )
+            return "iteration_limit"
     
     async def run_async(self):
         """Asynchronous execution core loop."""

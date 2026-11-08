@@ -4,6 +4,11 @@ import ollama
 
 logger = logging.getLogger("Assistant")
 
+
+class OllamaClientError(RuntimeError):
+    """Raised when a request to the Ollama API fails."""
+
+
 class OllamaClient:
     """Handles real-time streaming communication with Ollama utilizing AsyncIO."""
     @staticmethod
@@ -32,17 +37,17 @@ class OllamaClient:
             async for chunk in response:
                 if hasattr(chunk, 'message'):
                     # 1. First, check if the model is currently outputting a thought process
-                    if getattr(chunk.message, 'thinking', None):
-                        yield chunk.message.thinking, True
+                    thinking = getattr(chunk.message, 'thinking', None)
+                    if thinking is not None:
+                        yield thinking, True
                     
                     # 2. Next, check if it's outputting the actual final answer content
                     if chunk.message.content:
                         yield chunk.message.content, False
 
-        except Exception as e:
-            # Log the error and yield an error message to the UI
-            logger.error(f"Ollama API Error: {e}")
-            yield f'\n{{"message": "API Error: {e}", "actions": []}}\n', False
+        except Exception as error:
+            logger.exception("Ollama API Error")
+            raise OllamaClientError(f"Ollama API request failed: {error}") from error
 
     @staticmethod
     def get_stats(model: str):

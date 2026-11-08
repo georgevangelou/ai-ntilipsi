@@ -38,7 +38,8 @@ SYSTEM_PROMPT = (
     '2. Prefer "patch" over "write" for updates changing less than 60% of an existing file.\n'
     '3. When using "write", placeholders like "# rest of code" are forbidden. Emit the entire code contents.\n'
     '4. For "patch", copy "search" verbatim from the current file and include enough surrounding lines to identify a unique block.\n'
-    '5. After actions run, their results will be provided in a follow-up turn. Continue using those results until the request is complete; then respond with "actions": [].'
+    '5. Use only the listed action types and provide every required field with the correct value type.\n'
+    '6. After actions run, their results will be provided in a follow-up turn. Continue using those results until the request is complete; then respond with "actions": [].'
 )
 
 def load_config() -> dict:

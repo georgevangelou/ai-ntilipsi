@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import AsyncMock, patch
 
 from assistant import Assistant
+from ollama_client import OllamaClientError
 
 
 class AgentIterationTests(unittest.TestCase):
@@ -39,8 +40,11 @@ class AgentIterationTests(unittest.TestCase):
 
         with patch("assistant.OllamaClient.chat_stream", side_effect=chat_stream), \
                 patch("assistant.rich_print"), patch("builtins.print"):
-            asyncio.run(self.assistant.run_agent_request(attach_system_prompt=True))
+            status = asyncio.run(
+                self.assistant.run_agent_request(attach_system_prompt=True)
+            )
 
+        self.assertEqual(status, "completed")
         self.assertEqual(len(model_inputs), 3)
         self.assertIn("hello", "\n".join(
             message["content"] for message in model_inputs[1][1]
@@ -58,13 +62,54 @@ class AgentIterationTests(unittest.TestCase):
         async def chat_stream(model, messages):
             self.assertEqual(model, "test-model")
             self.assertTrue(messages)
-            yield '{"message":"May I write this file?","actions":[{"type":"write"}]}', False
+            yield (
+                '{"message":"May I write this file?",'
+                '"actions":[{"type":"write","filename":"out.txt","content":"ok"}]}',
+                False,
+            )
 
         with patch("assistant.OllamaClient.chat_stream", side_effect=chat_stream) as stream, \
                 patch("assistant.rich_print"), patch("builtins.print"):
-            asyncio.run(self.assistant.run_agent_request(attach_system_prompt=True))
+            status = asyncio.run(
+                self.assistant.run_agent_request(attach_system_prompt=True)
+            )
 
+        self.assertEqual(status, "denied")
         stream.assert_called_once()
+
+    def test_invalid_model_response_is_not_reported_as_completion(self):
+        async def chat_stream(model, messages):
+            del model, messages
+            yield '{"message":"Invalid","actions":[{"type":"unknown"}]}', False
+
+        with patch("assistant.OllamaClient.chat_stream", side_effect=chat_stream), \
+                patch("assistant.rich_print"), patch("builtins.print"), \
+                patch.object(self.assistant.action_processor, "process", new_callable=AsyncMock) as process:
+            status = asyncio.run(
+                self.assistant.run_agent_request(attach_system_prompt=True)
+            )
+
+        self.assertEqual(status, "failed")
+        process.assert_not_awaited()
+
+    def test_model_api_failure_is_not_reported_as_completion(self):
+        async def chat_stream(model, messages):
+            del model, messages
+
+            async def fail_request():
+                raise OllamaClientError("Ollama API request failed: offline")
+
+            yield await fail_request(), False
+
+        with patch("assistant.OllamaClient.chat_stream", side_effect=chat_stream), \
+                patch("assistant.rich_print"), patch("builtins.print"), \
+                patch.object(self.assistant.action_processor, "process", new_callable=AsyncMock) as process:
+            status = asyncio.run(
+                self.assistant.run_agent_request(attach_system_prompt=True)
+            )
+
+        self.assertEqual(status, "failed")
+        process.assert_not_awaited()
 
 
 if __name__ == "__main__":
