@@ -36,7 +36,8 @@ SYSTEM_PROMPT = (
     'Rules:\n'
     '1. Files matched with "@filename" notation are already fully loaded already. Do NOT issue a "read" action block for them.\n'
     '2. Prefer "patch" over "write" for updates changing less than 60% of an existing file.\n'
-    '3. When using "write", placeholders like "# rest of code" are forbidden. Emit the entire code contents.'
+    '3. When using "write", placeholders like "# rest of code" are forbidden. Emit the entire code contents.\n'
+    '4. For "patch", copy "search" verbatim from the current file and include enough surrounding lines to identify a unique block.'
 )
 
 def load_config() -> dict:

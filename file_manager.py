@@ -60,7 +60,6 @@ class FileManager:
         """Replaces a specific block of text within a file with robust matching."""
         full_content = self.read_file(filename)
         
-        # search_block = search_text.strip('\n')
         search_block = search_text
         
         variants = [
@@ -72,6 +71,40 @@ class FileManager:
             if block and block in full_content:
                 new_content = full_content.replace(block, replace_text, 1)
                 return self.write_file(filename, new_content)
+
+        search_lines = [line.strip() for line in search_block.splitlines()]
+        source_lines = full_content.splitlines(keepends=True)
+        if search_lines and source_lines:
+            normalized_source_lines = [
+                line.rstrip('\r\n').strip() for line in source_lines
+            ]
+            offsets = [0]
+            for line in source_lines:
+                offsets.append(offsets[-1] + len(line))
+
+            matches = []
+            for start in range(len(source_lines) - len(search_lines) + 1):
+                end = start + len(search_lines)
+                if normalized_source_lines[start:end] != search_lines:
+                    continue
+
+                match_end = offsets[end]
+                if not search_block.endswith(('\n', '\r')):
+                    match_end -= len(source_lines[end - 1]) - len(
+                        source_lines[end - 1].rstrip('\r\n')
+                    )
+                matches.append((offsets[start], match_end))
+
+            if len(matches) == 1:
+                start, end = matches[0]
+                new_content = full_content[:start] + replace_text + full_content[end:]
+                return self.write_file(filename, new_content)
+            if len(matches) > 1:
+                raise ValueError(
+                    f"Could not patch {filename}: whitespace-insensitive search "
+                    "matched multiple locations."
+                )
+
         raise ValueError(f"Could not find exact block match inside {filename}.")
 
     def delete_file(self, filename: str) -> str:
