@@ -2,6 +2,7 @@
 
 import re
 import asyncio
+import json
 from pathlib import Path
 from prompt_toolkit import prompt
 from prompt_toolkit.history import FileHistory
@@ -33,11 +34,13 @@ class Assistant:
         self.history = ChatHistory(TOKEN_LIMIT)
         self.file_manager = FileManager()
         self.action_processor = ActionProcessor(self.file_manager)
+        self.history_log_path = Path.cwd() / ".history.log"
         self.history.add_message("system", SYSTEM_PROMPT)
+        self._save_history()
         
         self.attach_pattern = re.compile(r'@([a-zA-Z0-9_\-\.\/]+)')
         
-        self.commands = ['/stats', '/clear', '/help', '/default', '/fast', '/strong', '/ls_dir', '/self', '/exit', '/model', '/pure']
+        self.commands = ['/stats', '/clear', '/help', '/default', '/fast', '/strong', '/ls_dir', '/self', '/exit', '/model', '/pure', '/diff']
         self.completer = UnifiedCompleter(self.commands, self.file_manager)
         
         self.kb = KeyBindings()
@@ -48,6 +51,18 @@ class Assistant:
         @self.kb.add('enter')
         def _(event):
             event.current_buffer.validate_and_handle()
+
+    def _save_history(self) -> None:
+        """Overwrite the session log with the current conversation messages."""
+        try:
+            self.history_log_path.write_text(
+                json.dumps(self.history.get_history(), indent=2, ensure_ascii=False)
+                + "\n",
+                encoding="utf-8",
+            )
+        except OSError as error:
+            logger.exception("Could not save conversation history")
+            rich_print(f"[red]Could not save {self.history_log_path}: {error}[/red]")
 
     def handle_attachment_logic(self, user_input: str):
         """Processes file attachments identified by the @ symbol notation."""
@@ -120,6 +135,7 @@ class Assistant:
         
         elif self.is_option_in_command(cmd, "/clear")[0]:
             self.history.clear()
+            self._save_history()
             rich_print("[dim]Context reset to base configuration environment parameters.[/dim]")
             to_return = CONTINUE
 
@@ -131,6 +147,7 @@ class Assistant:
 - /default          Switch to default structural mapping
 - /fast             Switch to swift execution layout
 - /strong           Switch to deep inference layout
+- /diff            Toggle full patch diff output
 - /ls_dir           List all target contents recursively
 - /self             Inject active orchestration workspace context
 - @filename         Bind target resource context array
@@ -153,6 +170,14 @@ class Assistant:
             if len(parts) > 1:
                 self.model = parts[1]
                 rich_print(f"Switched model pointer: {self.model}")
+            to_return = CONTINUE
+
+        elif cmd == "/diff":
+            self.action_processor.show_patch_diff = (
+                not self.action_processor.show_patch_diff
+            )
+            state = "enabled" if self.action_processor.show_patch_diff else "disabled"
+            rich_print(f"[green]Full patch diffs {state}.[/green]")
             to_return = CONTINUE
 
         elif cmd == "/ls_dir":
@@ -208,6 +233,7 @@ class Assistant:
 
             print()
             self.history.add_message("assistant", full_response)
+            self._save_history()
             try:
                 parsed_response = self.action_processor.parse_response(full_response)
             except ActionResponseError as error:
@@ -240,6 +266,7 @@ class Assistant:
             self.history.add_context(
                 f"=== TOOL EXECUTION ENVIRONMENT STATUS UPDATE ===\n{summary}"
             )
+            self._save_history()
             if any("Execution denied by user permission gate." in str(result)
                    for result in action_results):
                 return "denied"
@@ -284,6 +311,7 @@ class Assistant:
                 if not clean_input: continue
 
                 self.history.add_message("user", clean_input)
+                self._save_history()
                 await self.run_agent_request(attach_system_prompt)
 
             except (EOFError, KeyboardInterrupt):

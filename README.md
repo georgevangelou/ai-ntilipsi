@@ -19,6 +19,8 @@ Parses JSON actions from AI responses. Executes read/write/patch/delete operatio
 
 The assistant feeds action results back to the model and continues the same request for up to 10 model iterations, stopping when no actions are returned or an action is denied. Invalid model/action responses and Ollama request failures are reported as incomplete requests. Actions are validated as a batch before any of them run.
 
+Conversation messages, model responses, and action calls are saved as JSON in `.history.log`. The file is overwritten when a new assistant session starts and updated as the conversation progresses. Use `/diff` to toggle full unified-diff output for patch actions; it is disabled by default.
+
 ### `file_manager.py`
 Secure sandboxed file operations. Lists files, reads/writes/patches/deletes with path validation against ignored directories.
 
@@ -41,6 +43,8 @@ python main.py --model <model_name>
 - `/exit` - Terminate interactive session gracefully
 - `/model <name>` - Set custom model name dynamically
 - `/pure` - Disable system prompt attachment
+- `/diff` - Toggle full patch diff output
 - `/self` - Inject active orchestration workspace context
 - `@filename` - Attach file context
 - `/ls_dir` - List directory contents
+- `/math sqrt <number>` - Calculate square root of a number

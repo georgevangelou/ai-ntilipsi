@@ -1,9 +1,14 @@
 import asyncio
 import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock
+from unittest.mock import patch
 
 from action_processor import ActionProcessor, ActionResponseError
+from file_manager import FileManager
+from rich.syntax import Syntax
 
 
 class ActionResponseValidationTests(unittest.TestCase):
@@ -52,6 +57,37 @@ class ActionResponseValidationTests(unittest.TestCase):
             with self.subTest(response=response):
                 with self.assertRaises(ActionResponseError):
                     self.processor.parse_response(response)
+
+    def test_patch_diff_option_displays_the_full_unified_diff(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_manager = FileManager()
+            file_manager.base_dir = Path(temp_dir)
+            filename = str(Path(temp_dir) / "notes.txt")
+            Path(filename).write_text("before\n", encoding="utf-8")
+            processor = ActionProcessor(file_manager)
+            processor.show_patch_diff = True
+            response = json.dumps({
+                "message": "Updating the file.",
+                "actions": [{
+                    "type": "patch",
+                    "filename": filename,
+                    "search": "before",
+                    "replace": "after",
+                }],
+            })
+
+            with patch("action_processor.prompt", return_value="yes"), \
+                    patch("action_processor.rich_print") as display:
+                results = asyncio.run(processor.process(response))
+
+            self.assertEqual(results, [f"Successfully patched {filename}"])
+            diff = next(
+                item.code for (item,), _kwargs in display.call_args_list
+                if isinstance(item, Syntax)
+            )
+            self.assertIn(f"--- a/{filename}", diff)
+            self.assertIn("-before", diff)
+            self.assertIn("+after", diff)
 
 
 if __name__ == "__main__":

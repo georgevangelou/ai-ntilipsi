@@ -1,5 +1,8 @@
 import asyncio
+import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from assistant import Assistant
@@ -8,8 +11,41 @@ from ollama_client import OllamaClientError
 
 class AgentIterationTests(unittest.TestCase):
     def setUp(self):
-        self.assistant = Assistant("test-model")
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        self.history_log_path = Path(self.temp_dir.name) / ".history.log"
+        self.history_log_path.write_text("stale session", encoding="utf-8")
+        with patch("assistant.Path.cwd", return_value=Path(self.temp_dir.name)):
+            self.assistant = Assistant("test-model")
         self.assistant.history.add_message("user", "Read a file and summarize it.")
+        self.assistant._save_history()
+
+    def test_history_log_is_overwritten_for_each_new_session(self):
+        self.history_log_path.write_text("stale session", encoding="utf-8")
+        with patch("assistant.Path.cwd", return_value=Path(self.temp_dir.name)):
+            Assistant("test-model")
+        messages = json.loads(self.history_log_path.read_text(encoding="utf-8"))
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0]["role"], "system")
+
+        self.assistant.history.add_message(
+            "assistant",
+            '{"message":"Reading it.","actions":[{"type":"read","filename":"x.txt"}]}',
+        )
+        self.assistant._save_history()
+        messages = json.loads(self.history_log_path.read_text(encoding="utf-8"))
+        self.assertEqual([message["role"] for message in messages],
+                         ["system", "user", "assistant"])
+        self.assertIn('"type":"read"', messages[-1]["content"])
+
+    def test_diff_command_toggles_patch_diff_output(self):
+        with patch("assistant.rich_print"):
+            result, _ = self.assistant.handle_commands("/diff", "/diff")
+            self.assertEqual(result, "CONTINUE")
+            self.assertTrue(self.assistant.action_processor.show_patch_diff)
+
+            self.assistant.handle_commands("/diff", "/diff")
+            self.assertFalse(self.assistant.action_processor.show_patch_diff)
 
     def test_action_results_are_sent_to_a_follow_up_model_turn(self):
         responses = [
@@ -53,6 +89,16 @@ class AgentIterationTests(unittest.TestCase):
             message["content"] for message in model_inputs[2][1]
         ))
         self.assertEqual(self.assistant.action_processor.process.await_count, 3)
+        logged_messages = json.loads(
+            self.history_log_path.read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            [message["role"] for message in logged_messages].count("assistant"), 3
+        )
+        self.assertIn('"type":"read"', "\n".join(
+            message["content"] for message in logged_messages
+            if message["role"] == "assistant"
+        ))
 
     def test_permission_denial_stops_follow_up_turns(self):
         self.assistant.action_processor.process = AsyncMock(return_value=[

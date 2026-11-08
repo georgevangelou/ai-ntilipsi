@@ -1,9 +1,11 @@
 import re
 import json
 import asyncio
+import difflib
 from typing import Any, Dict, List, Union
 from prompt_toolkit import prompt
 from rich import print as rich_print
+from rich.syntax import Syntax
 from file_manager import FileManager
 
 
@@ -15,6 +17,7 @@ class ActionProcessor:
     """Handles parsing and execution of JSON action markers in AI responses."""
     def __init__(self, file_manager: FileManager):
         self.fm = file_manager
+        self.show_patch_diff = False
 
     @staticmethod
     def parse_response(response: str) -> Dict[str, Any]:
@@ -142,9 +145,25 @@ class ActionProcessor:
                             if isinstance(replace_val, list):
                                 replace_val = "\n".join(replace_val)
 
+                            original = (
+                                self.fm.read_file(filename)
+                                if self.show_patch_diff else None
+                            )
                             path = self.fm.patch_file(
                                 filename, search_val, replace_val
                             )
+                            if original is not None:
+                                updated = self.fm.read_file(filename)
+                                diff = "".join(difflib.unified_diff(
+                                    original.splitlines(keepends=True),
+                                    updated.splitlines(keepends=True),
+                                    fromfile=f"a/{filename}",
+                                    tofile=f"b/{filename}",
+                                ))
+                                if diff:
+                                    rich_print(Syntax(diff, "diff", theme="monokai"))
+                                else:
+                                    rich_print("[dim]Patch made no changes.[/dim]")
                             rich_print(
                                 f"[green][SYSTEM] File patched successfully: "
                                 f"{path}[/green]"
