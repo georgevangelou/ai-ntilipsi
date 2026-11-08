@@ -39,7 +39,9 @@ SYSTEM_PROMPT = (
     '3. When using "write", placeholders like "# rest of code" are forbidden. Emit the entire code contents.\n'
     '4. For "patch", copy "search" verbatim from the current file and include enough surrounding lines to identify a unique block.\n'
     '5. Use only the listed action types and provide every required field with the correct value type.\n'
-    '6. After actions run, their results will be provided in a follow-up turn. Continue using those results until the request is complete; then respond with "actions": [].'
+    '6. After actions run, their results will be provided in a follow-up turn. Continue'
+    '   using those results until the request is complete; then respond with "actions": [].'
+    '7. ALWAYS read `instructions/python-fact-grounded-coding.md` before analyzing any Python code.'
 )
 
 def load_config() -> dict:
