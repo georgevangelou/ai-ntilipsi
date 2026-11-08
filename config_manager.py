@@ -12,7 +12,7 @@ DEFAULT_CONFIG = {
     },
     "settings": {
         "token_limit": 100000,
-        "history_file": ".chat_history",
+        "user_prompt_history_file": "user_prompt.history",
         "ignored_dirs": [".git", "__pycache__", "node_modules", ".venv", ".env", ".idea", ".vscode", ".github"]
     }
 }

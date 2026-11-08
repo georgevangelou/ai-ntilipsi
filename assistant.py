@@ -34,7 +34,7 @@ class Assistant:
         self.history = ChatHistory(TOKEN_LIMIT)
         self.file_manager = FileManager()
         self.action_processor = ActionProcessor(self.file_manager)
-        self.history_log_path = Path.cwd() / ".history.log"
+        self.history_log_path = Path.cwd() / "chat.history"
         self.history.add_message("system", SYSTEM_PROMPT)
         self._save_history()
         
@@ -288,7 +288,7 @@ class Assistant:
                 user_input = await asyncio.to_thread(
                     prompt,
                     f"\nUser > ", 
-                    history=FileHistory(CONFIG['settings']['history_file']),
+                    history=FileHistory(CONFIG['settings']['user_prompt_history_file']),
                     completer=self.completer,
                     key_bindings=self.kb,
                     multiline=True

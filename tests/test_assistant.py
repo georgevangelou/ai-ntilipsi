@@ -13,7 +13,7 @@ class AgentIterationTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp_dir.cleanup)
-        self.history_log_path = Path(self.temp_dir.name) / ".history.log"
+        self.history_log_path = Path(self.temp_dir.name) / "chat.history"
         self.history_log_path.write_text("stale session", encoding="utf-8")
         with patch("assistant.Path.cwd", return_value=Path(self.temp_dir.name)):
             self.assistant = Assistant("test-model")
