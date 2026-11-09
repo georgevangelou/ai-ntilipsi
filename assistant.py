@@ -253,8 +253,20 @@ class Assistant:
             token_count = self.history.get_token_count()
             rich_print(f"[dim]Tokens used so far: {token_count}/{TOKEN_LIMIT}[/dim]", end="")
             
-            if not action_results:
+            if not parsed_response["actions"]:
                 return "completed"
+
+            if not action_results:
+                action_types = ", ".join(
+                    action["type"] for action in parsed_response["actions"]
+                )
+                missing_results = (
+                    f"No results were returned for requested action(s): "
+                    f"{action_types}."
+                )
+                logger.warning(missing_results)
+                rich_print(f"[yellow]{missing_results} Continuing the request.[/yellow]")
+                action_results = [missing_results]
 
             summary_items = []
             for result in action_results:

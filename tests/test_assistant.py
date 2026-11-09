@@ -100,6 +100,40 @@ class AgentIterationTests(unittest.TestCase):
             if message["role"] == "assistant"
         ))
 
+    def test_action_without_results_still_gets_a_follow_up_model_turn(self):
+        responses = [
+            '{"message":"I will read the file.","actions":[{"type":"read","filename":"notes.txt"}]}',
+            '{"message":"The request is complete.","actions":[]}',
+        ]
+        model_inputs = []
+
+        def chat_stream(model, messages):
+            model_inputs.append((model, list(messages)))
+
+            async def chunks():
+                yield responses[len(model_inputs) - 1], False
+
+            return chunks()
+
+        self.assistant.action_processor.process = AsyncMock(side_effect=[[], []])
+
+        with patch("assistant.OllamaClient.chat_stream", side_effect=chat_stream), \
+                patch("assistant.rich_print"), patch("builtins.print"), \
+                patch("assistant.logger.warning") as warning_log:
+            status = asyncio.run(
+                self.assistant.run_agent_request(attach_system_prompt=True)
+            )
+
+        self.assertEqual(status, "completed")
+        self.assertEqual(len(model_inputs), 2)
+        warning_log.assert_called_once_with(
+            "No results were returned for requested action(s): read."
+        )
+        self.assertIn(
+            "No results were returned for requested action(s): read.",
+            "\n".join(message["content"] for message in model_inputs[1][1]),
+        )
+
     def test_permission_denial_stops_follow_up_turns(self):
         self.assistant.action_processor.process = AsyncMock(return_value=[
             "Execution denied by user permission gate."
