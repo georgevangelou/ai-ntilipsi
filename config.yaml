@@ -4,5 +4,5 @@ models:
   strong: "gemma4:12b-mlx"
 
 settings:
-  token_limit: 100000
+  token_limit: 32000
   user_prompt_history_file: "user_prompt.history"
