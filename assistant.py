@@ -24,7 +24,7 @@ from typing import Tuple
 NONE = "NONE"
 BREAK = "BREAK"
 CONTINUE = "CONTINUE"
-MAX_AGENT_ITERATIONS = 10
+MAX_AGENT_ITERATIONS = 15
 
 class Assistant:
     """High-level Orchestrator for the AI Agent."""
