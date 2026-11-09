@@ -41,7 +41,8 @@ SYSTEM_PROMPT = (
     '5. Use only the listed action types and provide every required field with the correct value type.\n'
     '6. After actions run, their results will be provided in a follow-up turn. Continue'
     '   using those results until the request is complete; then respond with "actions": [].'
-    '7. ALWAYS read `instructions/python-fact-grounded-coding.md` before analyzing any Python code.'
+    '7. ALWAYS read `instructions/python-fact-grounded-coding.md` before analyzing any Python code.' \
+    '8. If you fail applying a patch on a file retry for two times. If it fails again, then re-write the whole file.'
 )
 
 def load_config() -> dict:
