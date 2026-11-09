@@ -248,6 +248,11 @@ class Assistant:
 
             print()
             action_results = await self.action_processor.process(full_response)
+            
+            # Print token count after each AI response
+            token_count = self.history.get_token_count()
+            rich_print(f"[dim]Tokens used so far: {token_count}/{TOKEN_LIMIT}[/dim]", end="")
+            
             if not action_results:
                 return "completed"
 
