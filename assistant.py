@@ -71,7 +71,7 @@ class Assistant:
             try:
                 content = self.file_manager.read_file(file_path_str)
                 self.history.add_context(
-                    f"=== ATTACHED FILE CONTEXT [{file_path_str}] ===\n{content}\n=======================================",
+                    f"=== ATTACHED FILE CONTEXT [{file_path_str}] ===\n{content}\n===",
                     defer_until_next_user=True,
                 )
                 rich_print(f"[green]Attached context from: {file_path_str}[/green]")
@@ -184,7 +184,7 @@ class Assistant:
             file_list = self.file_manager.list_files()
             content = str(file_list)
             self.history.add_context(
-                f"=== GOT FILE LIST FROM CURRENT DIRECTORY ===\n{content}\n=======================================",
+                f"=== GOT FILE LIST FROM CURRENT DIRECTORY ===\n{content}\n===",
                 defer_until_next_user=True,
             )
             rich_print(f"[green]Read file list from current directory.[/green]")
@@ -196,7 +196,7 @@ class Assistant:
             try:
                 content = Path(__file__).read_text(encoding="utf-8")
                 self.history.add_context(
-                    f"=== ATTACHED FILE CONTEXT [self] ===\n{content}\n=======================================",
+                    f"=== ATTACHED FILE CONTEXT [self] ===\n{content}\n===",
                     defer_until_next_user=True,
                 )
                 rich_print(f"[green]Bound orchestration layer source successfully.[/green]")
@@ -273,7 +273,7 @@ class Assistant:
                 if isinstance(result, dict) and result.get("type") == "read_success":
                     self.history.add_context(
                         f"=== AUTO-READ FILE CONTENT [{result['filename']}] ===\n"
-                        f"{result['content']}\n======================================="
+                        f"{result['content']}\n==="
                     )
                     summary_items.append(f"- {result['status']}")
                 else:
