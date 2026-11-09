@@ -25,14 +25,17 @@ class OllamaClient:
                 "temperature": 0.3,  # Lower temperature lowers syntax variance
                 "top_p": 0.9
             }
+            info = ollama.show(model=model)
+            can_think = 'thinking' in info['capabilities']
             response = await async_client.chat(
                 model=model,
                 messages=messages,
                 stream=True,
                 options=options,
                 format='json',  # Enforces strict JSON response syntax from Ollama
-                think=True
+                think=can_think
             )
+
             # Iterate through the streamed chunks and yield each piece safely
             async for chunk in response:
                 if hasattr(chunk, 'message'):
