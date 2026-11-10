@@ -40,7 +40,10 @@ class Assistant:
         
         self.attach_pattern = re.compile(r'@([a-zA-Z0-9_\-\.\/]+)')
         
-        self.commands = ['/stats', '/clear', '/help', '/default', '/fast', '/strong', '/ls_dir', '/self', '/exit', '/model', '/pure', '/diff']
+        self.commands = ['/stats', '/clear', '/help', '/default',
+                         '/fast', '/strong', '/ls_dir', '/self', '/exit',
+                         '/model', '/pure', '/diff', '/limit'
+                         ]
         self.completer = UnifiedCompleter(self.commands, self.file_manager)
         
         self.kb = KeyBindings()
@@ -128,7 +131,7 @@ class Assistant:
             t.add_row("Model Name", self.model)
             t.add_row("Parameters", params)
             t.add_row("Token Window Limit", ctx)
-            t.add_row("Imposed Token Limit", str(TOKEN_LIMIT))
+            t.add_row("Imposed Token Limit", str(self.history.get_limit()))
             t.add_row("Tokens Currently Used", str(tokens_used))
             rich_print(t)
             to_return = CONTINUE
@@ -179,6 +182,16 @@ class Assistant:
             state = "enabled" if self.action_processor.show_patch_diff else "disabled"
             rich_print(f"[green]Full patch diffs {state}.[/green]")
             to_return = CONTINUE
+
+        elif self.is_option_in_command(cmd, "/limit")[0]:
+            try:
+                new_limit = int(user_input.split()[-1])
+                self.history.set_limit(new_limit)
+                rich_print(f"[green]Token limit updated to: {new_limit}[/green]")
+                to_return = CONTINUE
+            except (ValueError, IndexError):
+                rich_print("[red]Invalid limit value. Please provide an integer.[/red]")
+                to_return = CONTINUE
 
         elif cmd == "/ls_dir":
             file_list = self.file_manager.list_files()
@@ -251,7 +264,7 @@ class Assistant:
             
             # Print token count after each AI response
             token_count = self.history.get_token_count()
-            rich_print(f"[dim]Tokens used so far: {token_count}/{TOKEN_LIMIT}[/dim]", end="")
+            rich_print(f"[dim]Tokens used so far: {token_count}/{self.history.get_limit()}[/dim]", end="")
             
             if not parsed_response["actions"]:
                 return "completed"
@@ -296,7 +309,7 @@ class Assistant:
     
     async def run_async(self):
         """Asynchronous execution core loop."""
-        rich_print(Panel(f"Connected to Ollama Backend Layer\nModel: {self.model}\nToken Window Limit: {self.history.limit}", 
+        rich_print(Panel(f"Connected to Ollama Backend Layer\nModel: {self.model}\nToken Window Limit: {self.history.get_limit()}", 
                          title="System Initialization Active", subtitle="Type /help for options", border_style="blue"))
         rich_print("[dim] Hint: Use [bold]Alt+Enter[/bold] or [bold]Esc+Enter[/bold] to write multi-line text snippets; press [bold]Enter[/bold] to submit.[/dim]")
         

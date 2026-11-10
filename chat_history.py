@@ -70,3 +70,12 @@ class ChatHistory:
         self.history = [self._system_prompt] if self._system_prompt is not None else []
         self._current_tokens = 0
         self._pending_context.clear()
+
+    def set_limit(self, limit: int):
+        """Update the token limit and re-trim history if allowed."""
+        self.limit = limit
+        self._trim_history()
+
+    def get_limit(self):
+        """Get the token limit."""
+        return self.limit
