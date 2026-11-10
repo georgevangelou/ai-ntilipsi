@@ -3,7 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from assistant import Assistant
 from ollama_client import OllamaClientError
@@ -190,6 +190,29 @@ class AgentIterationTests(unittest.TestCase):
 
         self.assertEqual(status, "failed")
         process.assert_not_awaited()
+
+    def test_stream_status_reports_thinking_and_response_progress(self):
+        async def chat_stream(model, messages):
+            del model, messages
+            yield "considering the attached code", True
+            yield '{"message":"Done.","actions":[]}', False
+
+        self.assistant.action_processor.process = AsyncMock(return_value=[])
+        status_display = MagicMock()
+
+        with patch("assistant.OllamaClient.chat_stream", side_effect=chat_stream), \
+                patch("assistant.rich_print"), patch("builtins.print"), \
+                patch("assistant.Status") as status:
+            status.return_value.__enter__.return_value = status_display
+            result = asyncio.run(
+                self.assistant.run_agent_request(attach_system_prompt=True)
+            )
+
+        self.assertEqual(result, "completed")
+        status_display.update.assert_any_call(
+            "[dim]Thinking (29 characters)...[/dim]"
+        )
+        status_display.update.assert_any_call("[dim]Generating response...[/dim]")
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ from prompt_toolkit import prompt
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from rich import print as rich_print
+from rich.status import Status
 from rich import table
 from rich.panel import Panel
 
@@ -222,23 +223,25 @@ class Assistant:
     async def run_agent_request(self, attach_system_prompt: bool) -> str:
         """Continue model turns and return the request outcome."""
         for _ in range(MAX_AGENT_ITERATIONS):
-            rich_print(f"\n[cyan]AI:[/cyan] ", end="", flush=True)
-            rich_print("[dim] Thinking...[/dim]")
+            rich_print("\n[cyan]AI:[/cyan] ", end="", flush=True)
 
             full_response = ""
+            thinking_characters = 0
             try:
-                async for chunk in OllamaClient.chat_stream(
-                    self.model, self.history.get_history(attach_system_prompt)
-                ):
-                    response, is_thinking = chunk
-                    if not is_thinking:
-                        full_response += response
-                        if "content" in response:
-                            rich_print("[dim]Writing content...[/]", end=" ", flush=True)
-                        elif "actions" in response:
-                            rich_print("[dim]Writing actions...[/]", end=" ", flush=True)
-                        elif "message" in response:
-                            rich_print("[dim]> Writing message...[/]", end=" ", flush=True)
+                with Status("[dim]Thinking...[/dim]", spinner="dots") as status:
+                    async for chunk in OllamaClient.chat_stream(
+                        self.model, self.history.get_history(attach_system_prompt)
+                    ):
+                        response, is_thinking = chunk
+                        if is_thinking:
+                            thinking_characters += len(response)
+                            status.update(
+                                "[dim]Thinking "
+                                f"({thinking_characters:,} characters)...[/dim]"
+                            )
+                        elif response:
+                            full_response += response
+                            status.update("[dim]Generating response...[/dim]")
             except OllamaClientError as error:
                 print()
                 rich_print(f"[red]{error} The request did not complete.[/red]")
