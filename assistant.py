@@ -20,12 +20,73 @@ from ollama_client import OllamaClient, OllamaClientError
 from action_processor import ActionProcessor, ActionResponseError
 from autocomplete import UnifiedCompleter
 from config_manager import SYSTEM_PROMPT
-from typing import Tuple
+from typing import List, Optional, Tuple
 
 NONE = "NONE"
 BREAK = "BREAK"
 CONTINUE = "CONTINUE"
 MAX_AGENT_ITERATIONS = 15
+
+
+class _ResponsePhaseTracker:
+    """Tracks which response field is currently being streamed from JSON."""
+
+    def __init__(self):
+        self.phase: Optional[str] = None
+        self._in_string = False
+        self._escaped = False
+        self._string_buffer: Optional[List[str]] = []
+        self._pending_key: Optional[str] = None
+        self._awaiting_colon = False
+
+    def feed(self, text: str) -> Optional[str]:
+        for character in text:
+            if self._in_string:
+                if self._escaped:
+                    self._escaped = False
+                    if self._string_buffer is not None:
+                        if len(self._string_buffer) < 8:
+                            self._string_buffer.append(character)
+                        else:
+                            self._string_buffer = None
+                elif character == "\\":
+                    self._escaped = True
+                elif character == '"':
+                    self._in_string = False
+                    self._pending_key = (
+                        "".join(self._string_buffer)
+                        if self._string_buffer is not None
+                        else None
+                    )
+                    self._awaiting_colon = True
+                elif self._string_buffer is not None:
+                    if len(self._string_buffer) < 8:
+                        self._string_buffer.append(character)
+                    else:
+                        self._string_buffer = None
+                continue
+
+            if self._awaiting_colon:
+                if character.isspace():
+                    continue
+                if character == ":":
+                    if self._pending_key == "message":
+                        self.phase = "message"
+                    elif self._pending_key in {
+                        "actions", "type", "filename", "search", "replace"
+                    }:
+                        self.phase = "actions"
+                    elif self._pending_key == "content":
+                        self.phase = "content"
+                self._awaiting_colon = False
+                self._pending_key = None
+
+            if character == '"':
+                self._in_string = True
+                self._string_buffer = []
+
+        return self.phase
+
 
 class Assistant:
     """High-level Orchestrator for the AI Agent."""
@@ -227,6 +288,8 @@ class Assistant:
 
             full_response = ""
             thinking_characters = 0
+            response_phase = _ResponsePhaseTracker()
+            displayed_status = None
             try:
                 with Status("[dim]Thinking...[/dim]", spinner="dots") as status:
                     async for chunk in OllamaClient.chat_stream(
@@ -235,13 +298,22 @@ class Assistant:
                         response, is_thinking = chunk
                         if is_thinking:
                             thinking_characters += len(response)
-                            status.update(
-                                "[dim]Thinking "
-                                f"({thinking_characters:,} characters)...[/dim]"
-                            )
+                            if not full_response:
+                                displayed_status = (
+                                    f"Thinking ({thinking_characters:,} characters)..."
+                                )
+                                status.update(f"[dim]{displayed_status}[/dim]")
                         elif response:
                             full_response += response
-                            status.update("[dim]Generating response...[/dim]")
+                            phase = response_phase.feed(response)
+                            phase_status = {
+                                "message": "Writing message...",
+                                "content": "Writing content...",
+                                "actions": "Writing actions...",
+                            }.get(phase, "Generating response...")
+                            if phase_status != displayed_status:
+                                displayed_status = phase_status
+                                status.update(f"[dim]{displayed_status}[/dim]")
             except OllamaClientError as error:
                 print()
                 rich_print(f"[red]{error} The request did not complete.[/red]")

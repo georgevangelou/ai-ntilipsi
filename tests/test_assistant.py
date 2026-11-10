@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from assistant import Assistant
+from assistant import Assistant, _ResponsePhaseTracker
 from ollama_client import OllamaClientError
 
 
@@ -195,9 +195,14 @@ class AgentIterationTests(unittest.TestCase):
         async def chat_stream(model, messages):
             del model, messages
             yield "considering the attached code", True
-            yield '{"message":"Done.","actions":[]}', False
+            yield '{"message":"Done.",', False
+            yield '"actions":[{"type":"write","filename":"x",', False
+            yield '"content":', False
+            yield '"value"}]}', False
 
-        self.assistant.action_processor.process = AsyncMock(return_value=[])
+        self.assistant.action_processor.process = AsyncMock(return_value=[
+            "Execution denied by user permission gate."
+        ])
         status_display = MagicMock()
 
         with patch("assistant.OllamaClient.chat_stream", side_effect=chat_stream), \
@@ -208,11 +213,30 @@ class AgentIterationTests(unittest.TestCase):
                 self.assistant.run_agent_request(attach_system_prompt=True)
             )
 
-        self.assertEqual(result, "completed")
+        self.assertEqual(result, "denied")
         status_display.update.assert_any_call(
             "[dim]Thinking (29 characters)...[/dim]"
         )
-        status_display.update.assert_any_call("[dim]Generating response...[/dim]")
+        status_display.update.assert_any_call("[dim]Writing message...[/dim]")
+        status_display.update.assert_any_call("[dim]Writing actions...[/dim]")
+        status_display.update.assert_any_call("[dim]Writing content...[/dim]")
+
+    def test_response_phase_tracker_ignores_field_names_inside_json_strings(self):
+        tracker = _ResponsePhaseTracker()
+        chunks = [
+            '{"message":',
+            '"This mentions \\"actions\\" and \\"content\\".",',
+            '"actions":[',
+            '{"type":"write","filename":"x","content":',
+            '"line one\\n\\"actions\\""}]}',
+        ]
+
+        phases = [tracker.feed(chunk) for chunk in chunks]
+
+        self.assertEqual(
+            phases,
+            ["message", "message", "actions", "content", "content"],
+        )
 
 
 if __name__ == "__main__":
