@@ -7,6 +7,7 @@ A terminal-based AI assistant with local filesystem integration and model switch
 - **Model Switching**: Easily switch between different models (fast, default, strong).
 - **Context Awareness**: Maintains conversation history and respects token limits.
 - **Action Processing**: Parses structured JSON responses to perform file operations.
+- **Interactive Completion**: Integrated auto-completion for slash commands and file context (@filename).
 
 ## Commands
 - `/stats` - Show model parameters
@@ -18,8 +19,9 @@ A terminal-based AI assistant with local filesystem integration and model switch
 - `/pure` - Disable system prompt
 - `/diff` - Toggle full patch diff output
 - `/self` - Inject active workspace context
-- `@filename` - Attach file context
 - `/ls_dir` - List directory contents
+- `@filename` - Attach file context
+- `Alt+Enter` - Insert newline for multi-line input
 
 ## Usage
 ```bash
