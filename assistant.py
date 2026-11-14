@@ -42,13 +42,14 @@ class Assistant:
         self.history.add_message("system", SYSTEM_PROMPT)
         self._save_history()
         self.is_thinking_allowed = True
+        self.bypass_permissions = False
         
         self.attach_pattern = re.compile(r'@([a-zA-Z0-9_\-\.\/]+)')
         
         self.commands = ['/stats', '/clear', '/help', '/default',
-                         '/fast', '/strong', '/ls_dir', '/self', '/exit',
-                         '/model', '/pure', '/diff', '/limit', '/think_on', '/think_off'
-                         ]
+            '/fast', '/strong', '/ls_dir', '/self', '/exit',
+            '/model', '/pure', '/diff', '/limit', '/think_on', '/think_off', '/allow_all', '/allow_auto'
+        ]
         self.completer = UnifiedCompleter(self.commands, self.file_manager)
         
         self.kb = KeyBindings()
@@ -242,6 +243,16 @@ class Assistant:
                 rich_print(f"[red]Error parsing runtime package: {e}[/red]")
             to_return = CONTINUE
 
+        elif cmd == "/allow_all":
+            self.bypass_permissions = True
+            rich_print(f"[green]Permissions bypassed. All actions will execute without confirmation.[/green]")
+            to_return = CONTINUE
+        
+        elif cmd == "/allow_auto":
+            self.bypass_permissions = False
+            rich_print(f"[green]Permissions not bypassed. Only read actions will execute without confirmation.[/green]")
+            to_return = CONTINUE
+
         return to_return, attach_system_prompt
 
     async def run_agent_request(self, attach_system_prompt: bool) -> str:
@@ -322,7 +333,7 @@ class Assistant:
                 rich_print(full_response)
 
             print()
-            action_results = await self.action_processor.process(full_response)
+            action_results = await self.action_processor.process(full_response, self.bypass_permissions)
             
             # Print token count after each AI response
             token_count = self.history.get_token_count()
@@ -366,7 +377,7 @@ class Assistant:
             self._record_agent_diagnostic(
                 f"Stopped after {MAX_AGENT_ITERATIONS} model iterations. "
                 "The request may be incomplete."
-            )
+)
             return "iteration_limit"
     
     async def run_async(self):
@@ -414,3 +425,4 @@ class Assistant:
             except Exception as e:
                 logger.exception("Runtime Exception")
                 rich_print(f"[red]Fatal Runtime Exception: {e}[/red]")
+ 

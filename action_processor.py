@@ -85,7 +85,7 @@ class ActionProcessor:
 
         return data
 
-    async def process(self, response: str) -> List[Union[str, Dict]]:
+    async def process(self, response: str, bypass_permissions: bool) -> List[Union[str, Dict]]:
         results = []
         data = self.parse_response(response)
         pending_actions = []
@@ -126,7 +126,7 @@ class ActionProcessor:
             user_choice = await asyncio.to_thread(
                 prompt, "Proceed with all actions? (y/n): "
             )
-            if user_choice.lower().strip() in ["y", "yes"]:
+            if bypass_permissions or user_choice.lower().strip() in ["y", "yes"]:
                 for action in pending_actions:
                     action_type = action["type"]
                     filename = action["filename"]
