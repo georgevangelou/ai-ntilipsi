@@ -345,7 +345,7 @@ class Assistant:
                 f"=== TOOL EXECUTION ENVIRONMENT STATUS UPDATE ===\n{summary}"
             )
             self._save_history()
-            if any("Execution denied by user permission gate." in str(result)
+            if any(str(result) == "Execution denied by user permission gate."
                    for result in action_results):
                 return "denied"
         else:
