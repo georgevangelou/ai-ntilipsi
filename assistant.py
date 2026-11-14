@@ -261,7 +261,7 @@ class Assistant:
                     messages = self.history.get_history(attach_system_prompt)
                     
                     async for chunk in OllamaClient.chat_stream(
-                        self.model, messages, think=self.is_thinking_allowed
+                        self.model, messages, self.is_thinking_allowed
                     ):
                         response, is_thinking = chunk
                         if is_thinking:

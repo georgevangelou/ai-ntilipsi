@@ -12,7 +12,7 @@ class OllamaClientError(RuntimeError):
 class OllamaClient:
     """Handles real-time streaming communication with Ollama utilizing AsyncIO."""
     @staticmethod
-    async def chat_stream(model: str, messages: List[Dict], is_thinking_allowed: bool = True) -> AsyncGenerator[Tuple[str, bool], None]:
+    async def chat_stream(model: str, messages: List[Dict], is_thinking_allowed: bool) -> AsyncGenerator[Tuple[str, bool], None]:
         """
         Sends a message to the specified Ollama model and streams the response back,
         strictly enforcing a valid JSON output structure.
