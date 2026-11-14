@@ -22,8 +22,11 @@ class OllamaClient:
             async_client = ollama.AsyncClient()
             # Initiate a streaming chat request
             options = {
-                "temperature": 0.3,  # Lower temperature lowers syntax variance
-                "top_p": 0.9
+                "temperature": 0.2,       # Lower temperature lowers syntax variance and lowers second-guessing
+                "top_p": 0.9,
+                "repeat_penalty": 1.08,   # Breaks "Wait, let me double check..." loops
+                "repeat_last_n": 2048,    # Looks back far enough to catch long thought loops
+                "num_predict": 2048       # Hard cap so a stuck thought doesn't run forever
             }
             info = ollama.show(model=model)
             can_think = 'thinking' in info['capabilities']
