@@ -199,15 +199,13 @@ class Assistant:
 
         elif cmd == "/think_off":
             self.is_thinking_allowed = False
-            rich_print("[green]Thinking disabled. The model will be instructed to skip its internal reasoning process.", end=" ")
+            rich_print("[green]Thinking disabled. The model will be instructed to skip its internal reasoning process.[/green]")
             # We can also check if the model supports a specific flag, but for now, we'll rely on instructions.
-            rich_print("[/green]")
             to_return = CONTINUE
 
         elif cmd == "/think_on":
             self.is_thinking_allowed = True
-            rich_print("[green]Thinking enabled. The model can use its internal reasoning process.", end=" ")
-            rich_print("[/green]")
+            rich_print("[green]Thinking enabled. The model can use its internal reasoning process.[/green]")
             to_return = CONTINUE
 
         elif self.is_option_in_command(cmd, "/limit")[0]:
@@ -328,7 +326,7 @@ class Assistant:
             
             # Print token count after each AI response
             token_count = self.history.get_token_count()
-            rich_print(f"[dim]Tokens used so far: {token_count}/{self.history.get_limit()}[/dim]", end="")
+            rich_print(f"[dim]Tokens used so far: {token_count}/{self.history.get_limit()}[/dim]")
             
             if not parsed_response["actions"]:
                 return "completed"
