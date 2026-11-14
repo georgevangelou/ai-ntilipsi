@@ -1,4 +1,4 @@
-# Local AI Agent System
+# AI-ntilipsi
 
 ## Overview
 A terminal-based AI assistant with local filesystem integration, model switching, and code execution capabilities.
