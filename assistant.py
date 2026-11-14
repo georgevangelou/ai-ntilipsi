@@ -41,7 +41,7 @@ class Assistant:
         self.history_log_path = Path.cwd() / "chat.history"
         self.history.add_message("system", SYSTEM_PROMPT)
         self._save_history()
-        self.thinking_enabled = True
+        self.is_thinking_allowed = True
         
         self.attach_pattern = re.compile(r'@([a-zA-Z0-9_\-\.\/]+)')
         
@@ -198,14 +198,14 @@ class Assistant:
             to_return = CONTINUE
 
         elif cmd == "/think_off":
-            self.thinking_enabled = False
+            self.is_thinking_allowed = False
             rich_print("[green]Thinking disabled. The model will be instructed to skip its internal reasoning process.", end=" ")
             # We can also check if the model supports a specific flag, but for now, we'll rely on instructions.
             rich_print("[/green]")
             to_return = CONTINUE
 
         elif cmd == "/think_on":
-            self.thinking_enabled = True
+            self.is_thinking_allowed = True
             rich_print("[green]Thinking enabled. The model can use its internal reasoning process.", end=" ")
             rich_print("[/green]")
             to_return = CONTINUE
@@ -263,7 +263,7 @@ class Assistant:
                     messages = self.history.get_history(attach_system_prompt)
                     
                     async for chunk in OllamaClient.chat_stream(
-                        self.model, messages, think=self.thinking_enabled
+                        self.model, messages, think=self.is_thinking_allowed
                     ):
                         response, is_thinking = chunk
                         if is_thinking:
