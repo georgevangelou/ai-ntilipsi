@@ -12,7 +12,7 @@ class OllamaClientError(RuntimeError):
 class OllamaClient:
     """Handles real-time streaming communication with Ollama utilizing AsyncIO."""
     @staticmethod
-    async def chat_stream(model: str, messages: List[Dict]) -> AsyncGenerator[Tuple[str, bool], None]:
+    async def chat_stream(model: str, messages: List[Dict], is_thinking_allowed: bool = True) -> AsyncGenerator[Tuple[str, bool], None]:
         """
         Sends a message to the specified Ollama model and streams the response back,
         strictly enforcing a valid JSON output structure.
@@ -30,14 +30,14 @@ class OllamaClient:
                 "num_predict": 8192       # Hard cap so a stuck thought doesn't run forever
             }
             info = ollama.show(model=model)
-            can_think = 'thinking' in info['capabilities']
+            can_model_think = 'thinking' in info['capabilities']
             response = await async_client.chat(
                 model=model,
                 messages=messages,
                 stream=True,
                 options=options,
                 format='json',  # Enforces strict JSON response syntax from Ollama
-                think=can_think
+                think=is_thinking_allowed and can_model_think
             )
 
             # Iterate through the streamed chunks and yield each piece safely

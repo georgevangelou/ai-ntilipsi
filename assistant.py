@@ -41,12 +41,13 @@ class Assistant:
         self.history_log_path = Path.cwd() / "chat.history"
         self.history.add_message("system", SYSTEM_PROMPT)
         self._save_history()
+        self.thinking_enabled = True
         
         self.attach_pattern = re.compile(r'@([a-zA-Z0-9_\-\.\/]+)')
         
         self.commands = ['/stats', '/clear', '/help', '/default',
                          '/fast', '/strong', '/ls_dir', '/self', '/exit',
-                         '/model', '/pure', '/diff', '/limit'
+                         '/model', '/pure', '/diff', '/limit', '/think_on', '/think_off'
                          ]
         self.completer = UnifiedCompleter(self.commands, self.file_manager)
         
@@ -196,6 +197,19 @@ class Assistant:
             rich_print(f"[green]Full patch diffs {state}.[/green]")
             to_return = CONTINUE
 
+        elif cmd == "/think_off":
+            self.thinking_enabled = False
+            rich_print("[green]Thinking disabled. The model will be instructed to skip its internal reasoning process.", end=" ")
+            # We can also check if the model supports a specific flag, but for now, we'll rely on instructions.
+            rich_print("[/green]")
+            to_return = CONTINUE
+
+        elif cmd == "/think_on":
+            self.thinking_enabled = True
+            rich_print("[green]Thinking enabled. The model can use its internal reasoning process.", end=" ")
+            rich_print("[/green]")
+            to_return = CONTINUE
+
         elif self.is_option_in_command(cmd, "/limit")[0]:
             try:
                 new_limit = int(user_input.split()[-1])
@@ -246,8 +260,10 @@ class Assistant:
                     f"[dim]Thinking (iteration {iteration}/{MAX_AGENT_ITERATIONS})...[/dim]",
                     spinner="dots",
                 ) as status:
+                    messages = self.history.get_history(attach_system_prompt)
+                    
                     async for chunk in OllamaClient.chat_stream(
-                        self.model, self.history.get_history(attach_system_prompt)
+                        self.model, messages, think=self.thinking_enabled
                     ):
                         response, is_thinking = chunk
                         if is_thinking:
