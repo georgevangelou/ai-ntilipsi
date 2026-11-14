@@ -49,13 +49,6 @@ When working with numerical calculations:
 - Verify input values are non-negative before computing roots
 - Handle edge cases like zero and negative numbers appropriately
 
-## Math Utilities
-
-When working with numerical calculations:
-- Use `math.sqrt()` for square root operations
-- Verify input values are non-negative before computing roots
-- Handle edge cases like zero and negative numbers appropriately
-
 ## Minimal Good Answer Shape
 
 When reporting the result, include the facts that changed the decision: the diagnostic code, type, call site, runtime value, failing input, debugger frame, or test result. Keep speculation out of the conclusion.
