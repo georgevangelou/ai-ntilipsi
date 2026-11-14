@@ -71,6 +71,15 @@ class Assistant:
             logger.exception("Could not save conversation history")
             rich_print(f"[red]Could not save {self.history_log_path}: {error}[/red]")
 
+    def _record_agent_diagnostic(self, message: str) -> None:
+        """Persist why an agent request stopped so it is visible in chat.history."""
+        logger.error(message)
+        rich_print(f"[yellow]{message}[/yellow]")
+        self.history.add_context(
+            f"=== AGENT REQUEST DIAGNOSTIC ===\n{message}\n==="
+        )
+        self._save_history()
+
     def handle_attachment_logic(self, user_input: str):
         """Processes file attachments identified by the @ symbol notation."""
         matches = self.attach_pattern.findall(user_input)
@@ -225,7 +234,7 @@ class Assistant:
 
     async def run_agent_request(self, attach_system_prompt: bool) -> str:
         """Continue model turns and return the request outcome."""
-        for _ in range(MAX_AGENT_ITERATIONS):
+        for iteration in range(1, MAX_AGENT_ITERATIONS + 1):
             rich_print("\n[cyan]AI:[/cyan] ", end="", flush=True)
 
             full_response = ""
@@ -233,7 +242,10 @@ class Assistant:
             response_phase = ResponsePhaseTracker()
             displayed_status = None
             try:
-                with Status("[dim]Thinking...[/dim]", spinner="dots") as status:
+                with Status(
+                    f"[dim]Thinking (iteration {iteration}/{MAX_AGENT_ITERATIONS})...[/dim]",
+                    spinner="dots",
+                ) as status:
                     async for chunk in OllamaClient.chat_stream(
                         self.model, self.history.get_history(attach_system_prompt)
                     ):
@@ -242,32 +254,51 @@ class Assistant:
                             thinking_characters += len(response)
                             if not full_response:
                                 displayed_status = (
-                                    f"Thinking ({thinking_characters:,} characters)..."
+                                    f"Iteration {iteration}/{MAX_AGENT_ITERATIONS}: "
+                                    f"thinking ({thinking_characters:,} characters)..."
                                 )
                                 status.update(f"[dim]{displayed_status}[/dim]")
                         elif response:
                             full_response += response
                             phase = response_phase.feed(response)
-                            phase_status = {
+                            phase_description = {
                                 "message": "Writing message...",
                                 "content": "Writing content...",
                                 "actions": "Writing actions...",
                             }.get(phase, "Generating response...")
+                            phase_status = (
+                                f"Iteration {iteration}/{MAX_AGENT_ITERATIONS}: "
+                                f"{phase_description}"
+                            )
                             if phase_status != displayed_status:
                                 displayed_status = phase_status
                                 status.update(f"[dim]{displayed_status}[/dim]")
             except OllamaClientError as error:
                 print()
-                rich_print(f"[red]{error} The request did not complete.[/red]")
+                self._record_agent_diagnostic(
+                    f"Model request failed on iteration {iteration}/"
+                    f"{MAX_AGENT_ITERATIONS}: {error}"
+                )
                 return "failed"
 
             print()
+            if not full_response:
+                self._record_agent_diagnostic(
+                    f"Model stream ended without response content on iteration "
+                    f"{iteration}/{MAX_AGENT_ITERATIONS} "
+                    f"(thinking output: {thinking_characters:,} characters)."
+                )
+                return "failed"
+
             self.history.add_message("assistant", full_response)
             self._save_history()
             try:
                 parsed_response = self.action_processor.parse_response(full_response)
             except ActionResponseError as error:
-                rich_print(f"[red]Invalid model response: {error}[/red]")
+                self._record_agent_diagnostic(
+                    f"Invalid model response on iteration {iteration}/"
+                    f"{MAX_AGENT_ITERATIONS}: {error}"
+                )
                 return "failed"
 
             conversation_text = parsed_response["message"]
@@ -318,9 +349,9 @@ class Assistant:
                    for result in action_results):
                 return "denied"
         else:
-            rich_print(
-                f"[yellow]Stopped after {MAX_AGENT_ITERATIONS} model iterations. "
-                "The request may be incomplete.[/yellow]"
+            self._record_agent_diagnostic(
+                f"Stopped after {MAX_AGENT_ITERATIONS} model iterations. "
+                "The request may be incomplete."
             )
             return "iteration_limit"
     
@@ -359,7 +390,9 @@ class Assistant:
 
                 self.history.add_message("user", clean_input)
                 self._save_history()
-                await self.run_agent_request(attach_system_prompt)
+                outcome = await self.run_agent_request(attach_system_prompt)
+                if outcome != "completed":
+                    rich_print(f"\n[yellow]Agent request ended with status: {outcome}.[/yellow]")
 
             except (EOFError, KeyboardInterrupt):
                 rich_print("\n[yellow]Shutdown intercept caught. Graceful exit initiated.[/yellow]")
