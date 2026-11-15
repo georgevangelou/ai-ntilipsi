@@ -382,7 +382,7 @@ class Assistant:
     
     async def run_async(self):
         """Asynchronous execution core loop."""
-        rich_print(Panel(f"Connected to Ollama Backend Layer\nModel: {self.model}\nToken Window Limit: {self.history.get_limit()}", 
+        rich_print(Panel(f"Connected to Ollama Backend Layer\nDefault Model: {self.model}\nToken Window Limit: {self.history.get_limit()}", 
                          title="System Initialization Active", subtitle="Type /help for options", border_style="blue"))
         rich_print("[dim] Hint: Use [bold]Alt+Enter[/bold] or [bold]Esc+Enter[/bold] to write multi-line text snippets; press [bold]Enter[/bold] to submit.[/dim]")
         

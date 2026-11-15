@@ -26,7 +26,7 @@ def check_requirements() -> None:
                 if line and not line.startswith("#"):
                     required_packages.append(line)
     except FileNotFoundError:
-        rich_print(f"[red]Error: requirements.txt not found. Skipping dependency check.[/red]")
+        rich_print(f"[red]Error: requirements.txt not found. Cannot verify dependencies.[/red]")
         exit(1)
 
     missing_packages = []
@@ -43,12 +43,11 @@ def check_requirements() -> None:
         rich_print(f"\n[red]Missing Required Packages:[/red]")
         for pkg in missing_packages:
             rich_print(f"  - {pkg}")
-        rich_print(f"\nTo install dependencies, run: [bold]pip install {' '.join(required_packages)}[/bold]")
+        rich_print(f"\nTo install dependencies, run: [bold]python3 -m pip install {' '.join(required_packages)}[/bold]")
     else:
-        rich_print("[green]All required packages are installed.[/green]")
+        rich_print("[green]✓ All required packages are installed.[/green]")
 
-    print("\n")
-    rich_print("[cyan]Ollama & Model Status Check...[/cyan]")
+    rich_print("[cyan]\nOllama & Model Status Check...[/cyan]")
 
     try:
         # Check if Ollama is running
@@ -60,11 +59,12 @@ def check_requirements() -> None:
         )
         if result.returncode == 0:
             rich_print(f"[green]✓ Ollama is running properly.[/green]")
-            if result.stdout.strip():
+            print_available_models = False
+            if print_available_models and result.stdout.strip():
                 print(result.stdout.strip())
         else:
             rich_print(f"[red]✗ Ollama is not running.[/red]")
-            rich_print("Please install Ollama first: https://ollama.com/download")
+            rich_print("Please install (https://ollama.com/download) and start Ollama first")
 
         # Check for configured models
         from config_manager import DEFAULT_MODEL, FAST_MODEL, STRONG_MODEL
@@ -72,14 +72,14 @@ def check_requirements() -> None:
         
         models_to_check = [DEFAULT_MODEL, FAST_MODEL, STRONG_MODEL]
         
-        rich_print("\nChecking Model Availability...")
+        rich_print("\n[cyan]Checking Model Availability...[/cyan]")
         for model in set(models_to_check):
             if not model: continue
             try:
                 info = ollama.show(model=model)
-                rich_print(f"  - [green]✓{model}[/green] is available.")
+                rich_print(f"  - [green]✓ {model}[/green] is available.")
             except Exception:
-                rich_print(f"  - [red]✗{model}[/red] is NOT available. Please run 'ollama pull {model}'")
+                rich_print(f"  - [red]✗ {model}[/red] is NOT available. Please run 'ollama pull {model}'")
 
     except FileNotFoundError:
         rich_print(f"[red]✗ Ollama binary not found![/red]")
@@ -88,8 +88,7 @@ def check_requirements() -> None:
         rich_print(f"[yellow]⚠ Warning: Could not verify Ollama status ({e})[/yellow]")
         rich_print("Make sure Ollama is installed and running.")
 
-    print("\n")
-    rich_print("[cyan]Starting Application...[/cyan]")
+    rich_print("[cyan]\nStarting Application...[/cyan]")
 
 if __name__ == "__main__":
     check_requirements()
